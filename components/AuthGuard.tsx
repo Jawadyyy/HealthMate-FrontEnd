@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import useUser from "@/hooks/useUser";
+import useUser from "@/lib/hooks/useUser";
 import { useEffect } from "react";
 
 export default function AuthGuard({ children }: any) {
