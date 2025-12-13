@@ -1,1 +1,87 @@
 @import "tailwindcss";
+
+:root {
+	/* Palette tuned to the landing mock: page white with solid greens for sections */
+	--hm-bg: #ffffff; /* page background */
+	--hm-text: #062f23; /* primary text (dark green) */
+	--hm-primary: #0f7a52; /* main solid green for sections */
+	--hm-primary-dark: #0a442f; /* darker green for borders/shadows */
+	--hm-accent: #f6fff8; /* near-white accent used inside green blocks */
+	--hm-white-10: rgba(255,255,255,0.10);
+	--hm-white-06: rgba(255,255,255,0.06);
+	--hm-glass: rgba(255,255,255,0.04);
+}
+
+html, body, #__next {
+	height: 100%;
+}
+
+body {
+	background-color: var(--hm-bg);
+	color: var(--hm-text);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Theme helper classes (preserve layout while offering themed components) */
+.hm-glass {
+	background: rgba(255, 255, 255, 0);
+	border: 1px solid var(--hm-white-06);
+	backdrop-filter: blur(8px);
+}
+
+.hm-card {
+	background: var(--hm-primary);
+	color: white;
+	border: 1px solid var(--hm-primary-dark);
+	border-radius: 1rem;
+}
+
+.hm-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 0.6rem 1.25rem;
+	border-radius: 0.75rem;
+	color: white;
+	font-weight: 600;
+	background-color: var(--hm-primary);
+	box-shadow: 0 8px 20px rgba(11,102,62,0.12);
+	border: 1px solid rgba(255,255,255,0.06);
+}
+
+.hm-accent {
+	color: var(--hm-accent);
+}
+
+.text-hm-text { color: var(--hm-text); }
+
+.bg-white { background-color: #ffffff; }
+
+/* subtle grid overlay (kept light to preserve layout readability) */
+.hm-grid-overlay {
+	pointer-events: none;
+	position: absolute;
+	inset: 0;
+	opacity: 0.06;
+	background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'><g fill='none' stroke='%2390b993' stroke-opacity='0.12'><path d='M0 30h60M30 0v60'/></g></svg>");
+	background-repeat: repeat;
+}
+
+/* Solid background helper using the primary green at light opacity */
+.bg-hm-primary-20 { background-color: rgba(15,122,82,0.18); }
+.bg-hm-primary-10 { background-color: rgba(15,122,82,0.10); }
+.text-hm-accent { color: var(--hm-accent); }
+
+/* darker primary helper */
+.bg-hm-primary-dark { background-color: var(--hm-primary-dark); }
+
+/* portable hero styles used by existing layout (non-invasive) */
+.hm-hero-title { text-shadow: 0 6px 18px rgba(2,6,23,0.6); }
+.hm-muted { color: rgba(255,255,255,0.75); }
+
+/* small responsive utility tweaks to keep layout identical */
+@media (max-width: 640px) {
+	.hm-card { padding: 1rem; }
+}
