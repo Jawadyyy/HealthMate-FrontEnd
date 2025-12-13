@@ -104,7 +104,7 @@ export default function Home() {
         <h3 className="text-2xl font-bold text-white mb-4">Customer Portal</h3>
         <p className="text-white/80 mb-6 leading-relaxed">Check your orders, prescriptions, and wellness recommendations.</p>
         <div className="flex items-center justify-between">
-          <a href="/auth/login/patient" className="px-6 py-3 bg-green-700 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:bg-green-800">Enter Portal</a>
+          <a href="patient/login" className="px-6 py-3 bg-green-700 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:bg-green-800">Enter Portal</a>
           <span className="text-xs text-white/70">Secure Login →</span>
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function Home() {
         <h3 className="text-2xl font-bold text-white mb-4">Doctor Portal</h3>
         <p className="text-white/80 mb-6 leading-relaxed">Manage prescriptions and patient interactions efficiently.</p>
         <div className="flex items-center justify-between">
-          <a href="/auth/login/doctor" className="px-6 py-3 bg-emerald-700 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:bg-emerald-800">Enter Portal</a>
+          <a href="doctor/login" className="px-6 py-3 bg-emerald-700 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:bg-emerald-800">Enter Portal</a>
           <span className="text-xs text-white/70">Professional Access →</span>
         </div>
       </div>
