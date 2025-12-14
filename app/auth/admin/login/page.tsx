@@ -20,8 +20,13 @@ export default function AdminLogin() {
     try {
       const response = await loginAdmin(email, password);
       
-      // If login is successful, redirect to admin dashboard
-      if (response.data) {
+      // Store JWT token and role from backend response
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("role", "admin");
+        localStorage.setItem("isLoggedIn", "true");
+        
+        // Redirect to admin dashboard
         router.push("/admin/dashboard");
       }
     } catch (err) {
