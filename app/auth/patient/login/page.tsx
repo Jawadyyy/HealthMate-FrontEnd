@@ -70,7 +70,7 @@ export default function PatientLogin() {
         <p className="text-sm text-center text-gray-600 mt-4">
           Don’t have an account?{" "}
           <Link
-            href="/patient/signup"
+            href="/auth/patient/signup"
             className="text-green-600 font-medium hover:underline"
           >
             Create Account

@@ -50,7 +50,7 @@ export default function DoctorLogin() {
         {/* Signup Link */}
         <p className="text-sm text-center text-gray-600 mt-4">
           New doctor?{" "}
-          <Link href="/doctor/signup" className="text-green-600 font-medium hover:underline">
+          <Link href="/auth/doctor/signup" className="text-green-600 font-medium hover:underline">
             Create Account
           </Link>
         </p>
