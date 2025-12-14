@@ -1,68 +1,92 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
+import styles from "../../auth.module.css";
+import { loginPatient } from "@/lib/auth/auth";
+import { AxiosError } from "axios";
 
-export default function PatientSignup() {
+export default function SignupPage() {
   const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    // Signup successful → go to profile setup
-    router.push("/patient/profile-setup");
-  };
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+   
+  router.push("/auth/patient/login");
+}
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white px-4">
-      <form
-        onSubmit={handleSignup}
-        className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg"
-      >
+   <div className={`${styles.page} ${styles.themePatient}`}>
 
-        <h2 className="text-2xl font-bold text-green-700 mb-1">
-          Create Patient Account
-        </h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Step 1 of 2 – Account Information
-        </p>
+      {/* LEFT PANEL */}
+      <div className={styles.red}>
+        <h1>Welcome Back!</h1>
+        <p>To keep connected with us please login</p>
+        <Link href="/auth/patient/login">
+          <button>SIGN IN</button>
+        </Link>
+      </div>
 
-        <input
-          required
-          className="w-full p-3 mb-3 border rounded-lg focus:ring-2 focus:ring-green-500"
-          placeholder="Full Name"
-        />
-        <input
-          required
-          type="email"
-          className="w-full p-3 mb-3 border rounded-lg focus:ring-2 focus:ring-green-500"
-          placeholder="Email"
-        />
-        <input
-          required
-          type="password"
-          className="w-full p-3 mb-3 border rounded-lg focus:ring-2 focus:ring-green-500"
-          placeholder="Password"
-        />
-        <input
-          required
-          type="password"
-          className="w-full p-3 mb-5 border rounded-lg focus:ring-2 focus:ring-green-500"
-          placeholder="Confirm Password"
-        />
+      {/* RIGHT PANEL */}
+      <div className={styles.form}>
+        <h1>Create Account</h1>
 
-        <button className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700">
-          Continue
-        </button>
+        {error && <p className={styles.error}>{error}</p>}
 
-        <p className="text-sm text-center mt-4">
-          Already have an account?{" "}
-          <Link href="/patient/login" className="text-green-600 hover:underline">
-            Login
-          </Link>
-        </p>
+        <form onSubmit={handleSignup}>
+          <input
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
 
-      </form>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Sign Up"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
