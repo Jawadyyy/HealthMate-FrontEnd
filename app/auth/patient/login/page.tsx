@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "../../auth.module.css";
 import { loginPatient } from "@/lib/auth/auth";
 import { AxiosError } from "axios";
@@ -27,12 +26,10 @@ export default function LoginPage() {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("role", "patient");
         localStorage.setItem("isLoggedIn", "true");
-
         router.push("/patient/dashboard");
       }
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
-
       if (axiosError.response) {
         setError(
           axiosError.response.data?.message || "Invalid email or password"
@@ -47,12 +44,18 @@ export default function LoginPage() {
     }
   };
 
- 
-    return (
-  <div className={`${styles.panelInner} ${styles.themePatient}`}>
+  const goToSignup = () => {
+    router.push("/auth/patient/signup");
+  };
 
-      {/* LEFT: LOGIN */}
-      <div className={styles.form}>
+  return (
+    <>
+      {/* Left: Login Form */}
+      <div className={styles.formPanel}>
+        <div className={styles.formLogo}>
+          
+        </div>
+        
         <h1>Sign In</h1>
 
         {error && <p className={styles.error}>{error}</p>}
@@ -80,16 +83,20 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <p className={styles.availability}>
+          24/7 Available
+        </p>
       </div>
 
-      {/* RIGHT: CTA */}
-      <div className={styles.red}>
+      {/* Right: CTA Panel */}
+      <div className={styles.ctaPanel}>
         <h1>Hello, Friend!</h1>
         <p>Enter your personal details and start your journey</p>
-        <Link href="/auth/patient/signup">
-          <button>SIGN UP</button>
-        </Link>
+        <button onClick={goToSignup}>
+          SIGN UP
+        </button>
       </div>
-    </div>
+    </>
   );
 }

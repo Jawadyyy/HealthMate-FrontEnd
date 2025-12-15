@@ -1,6 +1,5 @@
 /* =====================================================
    THEME VARIABLES
-   Apply ONE of these on .page or .panelInner
 ===================================================== */
 
 .themePatient {
@@ -19,135 +18,155 @@
 }
 
 /* =====================================================
-   PAGE + CARD
+   PAGE (Used in layout.tsx)
 ===================================================== */
 
 .page {
-  min-height: calc(100vh - 102px);
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f6f5f7;
-}
-
-.card {
-  width: 800px;
-  height: 480px;
-  position: relative;
-  overflow: hidden;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.15),
-    0 6px 12px rgba(0, 0, 0, 0.08);
+  background: #f4f6fb;
+  overflow-x: hidden;
 }
 
 /* =====================================================
-   SLIDER CONTAINER (ANIMATION)
+   CARD (Outer container)
 ===================================================== */
 
-.container {
-  width: 200%;
-  height: 100%;
-  display: flex;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+.card {
+  width: min(800px, 95%);
+  min-height: 480px;
+  border-radius: 14px;
+  overflow: hidden; /* IMPORTANT: Hide overflow for sliding effect */
+  background: #ffffff;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.18);
+  position: relative;
 }
 
-.login {
+/* =====================================================
+   SLIDER CONTAINER (For animation)
+===================================================== */
+
+.sliderContainer {
+  width: 200%; /* Double width to hold both panels side by side */
+  height: 100%;
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Show login panel */
+.showLogin {
   transform: translateX(0%);
 }
 
-.signup {
+/* Show signup panel */
+.showSignup {
   transform: translateX(-50%);
 }
 
 /* =====================================================
-   PANELS
+   PANEL (Each panel holds one full view)
 ===================================================== */
 
 .panel {
-  width: 50%;
+  width: 50%; /* Each panel takes half of the 200% container */
   height: 100%;
   display: flex;
 }
 
-.panelInner {
-  width: 100%;
-  display: flex;
-}
-
 /* =====================================================
-   FORM SIDE
+   FORM PANEL (White side)
 ===================================================== */
 
-.form {
+.formPanel {
   width: 50%;
-  padding: 48px 52px;
+  height: 100%;
+  padding: clamp(60px, 5vw, 80px);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: #ffffff;
 }
 
-.form h1 {
-  font-size: 28px;
+.formPanel h1 {
+  font-size: 32px;
   font-weight: 700;
   color: #222;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
 
-.form p {
-  font-size: 14px;
+/* Logo styling */
+.formLogo {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.formLogo h2 {
+  color: var(--primary);
+  font-size: 26px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.formLogo p {
   color: #666;
-  margin-bottom: 24px;
+  font-size: 15px;
+  opacity: 0.8;
 }
 
 /* ================= INPUTS ================= */
 
-.form input {
+.formPanel input {
   width: 100%;
-  padding: 13px 15px;
-  margin-bottom: 14px;
-  font-size: 14px;
-  border-radius: 8px;
+  padding: 15px 17px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  border-radius: 9px;
   border: 1px solid #ddd;
   background: #f7f7f7;
   transition: all 0.25s ease;
 }
 
-.form input:focus {
+.formPanel input:focus {
   outline: none;
   background: #ffffff;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
-/* ================= PRIMARY BUTTON ================= */
+/* ================= FORM BUTTON ================= */
 
-.form button {
-  margin-top: 12px;
-  padding: 13px 45px;
+.formPanel button {
+  margin-top: 15px;
+  padding: 14px 0;
+  width: 100%;
   border-radius: 30px;
   border: none;
-  background: linear-gradient(
-    to right,
-    var(--primary),
-    var(--primary-dark)
-  );
+  background: linear-gradient(to right, var(--primary), var(--primary-dark));
   color: #ffffff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.form button:hover {
+.formPanel button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--primary) 35%, transparent);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
-.form button:active {
+.formPanel button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.formPanel button:active {
   transform: scale(0.96);
 }
 
@@ -155,142 +174,189 @@
 
 .error {
   color: #dc2626;
-  font-size: 13px;
-  margin-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border-radius: 6px;
+  border-left: 4px solid #dc2626;
 }
 
 /* =====================================================
-   SIDE PANEL (CTA)
+   CTA PANEL (Colored side)
 ===================================================== */
 
-.red {
+.ctaPanel {
   width: 50%;
-  padding: 100px;
-  background: linear-gradient(
-    135deg,
-    var(--primary),
-    var(--primary-dark)
-  );
+  height: 100%;
+  padding: clamp(70px, 6vw, 100px);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #ffffff;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  flex-direction: column;
   text-align: center;
 }
 
-.red h1 {
-  font-size: 30px;
+.ctaPanel h1 {
+  font-size: 34px;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  line-height: 1.2;
 }
 
-.red p {
-  font-size: 15px;
-  line-height: 1.5;
-  opacity: 0.9;
-  margin-bottom: 28px;
+.ctaPanel p {
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.95;
+  margin-bottom: 32px;
+  max-width: 280px;
 }
 
-/* ================= GHOST BUTTON ================= */
+/* ================= CTA BUTTON ================= */
 
-.red button {
-  padding: 12px 42px;
+.ctaPanel button {
+  padding: 14px 50px;
   border-radius: 30px;
   border: 2px solid #ffffff;
   background: transparent;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.red button:hover {
+.ctaPanel button:hover {
   background: #ffffff;
   color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
 }
 
-.red button:active {
+.ctaPanel button:active {
   transform: scale(0.96);
 }
 
 /* =====================================================
-   NAVBAR + RIBBON
+   AVAILABILITY TEXT (Login only)
 ===================================================== */
 
-.ribbon {
-  width: 100%;
-  height: 38px;
-  background: linear-gradient(
-    90deg,
-    var(--primary),
-    var(--primary-dark)
-  );
-  color: #ffffff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 28px;
+.availability {
+  margin-top: 25px;
   font-size: 13px;
-  font-weight: 600;
-}
-
-.navbar {
-  width: 100%;
-  height: 64px;
-  background: #ffffff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 48px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-.logo {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--primary);
-}
-
-.navLinks a {
-  font-size: 14px;
-  font-weight: 600;
-  color: #444;
-}
-
-.navLinks a:hover {
-  color: var(--primary);
+  color: #888;
+  text-align: center;
+  font-style: italic;
 }
 
 /* =====================================================
-   RESPONSIVE
+   SIGNUP FORM SPECIFIC STYLES
+===================================================== */
+
+/* Signup form needs different padding for more inputs */
+/* =====================================================
+   SIGNUP FORM SPECIFIC STYLES - MORE COMPACT
+===================================================== */
+
+/* Signup form needs less vertical padding to fit more inputs */
+.signupForm {
+  padding: clamp(40px, 3vw, 60px) !important; /* Reduced padding */
+}
+
+.signupForm h1 {
+  margin-bottom: 20px !important; /* Reduced margin */
+  font-size: 28px !important; /* Slightly smaller font */
+}
+
+/* More compact input fields */
+.signupForm input {
+  padding: 10px 12px !important; /* Smaller padding */
+  margin-bottom: 12px !important; /* Reduced spacing between inputs */
+  font-size: 13px !important; /* Slightly smaller font */
+  border-radius: 7px !important; /* Slightly less rounded */
+}
+
+/* Make the logo smaller in signup form */
+.signupForm .formLogo {
+  margin-bottom: 25px !important; /* Reduced margin */
+}
+
+.signupForm .formLogo h2 {
+  font-size: 22px !important; /* Smaller logo text */
+  margin-bottom: 4px !important;
+}
+
+.signupForm .formLogo p {
+  font-size: 13px !important; /* Smaller subtitle */
+}
+
+/* Smaller button in signup form */
+.signupForm button {
+  margin-top: 12px !important; /* Reduced margin */
+  padding: 12px 0 !important; /* Smaller button */
+  font-size: 13px !important; /* Smaller text */
+}
+
+/* =====================================================
+   RESPONSIVE (MOBILE) - Disable sliding on mobile
 ===================================================== */
 
 @media (max-width: 900px) {
   .card {
     width: 95%;
-    height: auto;
+    min-height: auto;
+    margin: 20px 0;
+    overflow: visible; /* Allow scrolling on mobile */
   }
 
-  .panel,
-  .panelInner {
+  .sliderContainer {
+    width: 100%;
+    position: relative;
+    transform: none !important; /* Disable sliding on mobile */
+    flex-direction: column;
+    transition: none !important;
+  }
+
+  .panel {
+    width: 100%;
+    height: auto;
+    min-height: 480px;
     flex-direction: column;
   }
 
-  .form,
-  .red {
+  .formPanel,
+  .ctaPanel {
     width: 100%;
-    padding: 40px;
+    padding: 50px 35px !important;
   }
 
-  .container {
-    width: 100%;
-    transform: none !important;
+  .ctaPanel {
+    order: -1; /* CTA panel on top for mobile */
   }
 
-  .navLinks {
-    display: none;
+  .signupForm {
+    padding: 40px 30px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .formPanel,
+  .ctaPanel {
+    padding: 40px 25px !important;
+  }
+
+  .formPanel h1 {
+    font-size: 28px;
+  }
+
+  .ctaPanel h1 {
+    font-size: 30px;
+  }
+
+  .signupForm {
+    padding: 35px 25px !important;
   }
 }

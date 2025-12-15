@@ -1,9 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import styles from "./auth.module.css";
+import PatientLoginPage from "./patient/login/page";
+import PatientSignupPage from "./patient/signup/page";
+import DoctorLoginPage from "./doctor/login/page";
+import DoctorSignupPage from "./doctor/signup/page";
+import AdminLoginPage from "./admin/login/page";
 
 export default function AuthLayout({
   children,
@@ -11,71 +15,60 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isSignup = pathname.includes("signup");
+  const [currentView, setCurrentView] = useState<'login' | 'signup'>('login');
+  const [currentRole, setCurrentRole] = useState<'patient' | 'doctor' | 'admin'>('patient');
+
+  // Determine theme and role based on route
+  const getThemeClass = () => {
+    if (pathname.includes('/admin')) return styles.themeAdmin;
+    if (pathname.includes('/doctor')) return styles.themeDoctor;
+    return styles.themePatient;
+  };
+
+  // Update current view based on route
+  useEffect(() => {
+    const isSignupPage = pathname.includes("signup");
+    setCurrentView(isSignupPage ? 'signup' : 'login');
+    
+    // Determine role
+    if (pathname.includes('/admin')) setCurrentRole('admin');
+    else if (pathname.includes('/doctor')) setCurrentRole('doctor');
+    else setCurrentRole('patient');
+  }, [pathname]);
+
+  const sliderClass = currentView === 'signup' ? styles.showSignup : styles.showLogin;
+  const themeClass = getThemeClass();
+
+  // Render appropriate component based on role and view
+  const renderComponent = () => {
+    if (currentRole === 'patient') {
+      return currentView === 'login' ? <PatientLoginPage /> : <PatientSignupPage />;
+    } else if (currentRole === 'doctor') {
+      return currentView === 'login' ? <DoctorLoginPage /> : <DoctorSignupPage />;
+    } else {
+      return <AdminLoginPage />; // Admin only has login
+    }
+  };
 
   return (
-    <>
-      {/* HEADER */}
-      <header className="w-full fixed top-0 left-0 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-green-100 rounded-xl blur-sm"></div>
-                <Image
-                  src="/logo.png"
-                  alt="HealthMate Logo"
-                  width={60}
-                  height={60}
-                  className="relative rounded-xl shadow-sm z-10"
-                  priority
-                />
-              </div>
-
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">HealthMate</h1>
-                <p className="text-sm text-gray-600">Digital Health Platform</p>
-              </div>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full border border-green-100">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-green-700">
-                24/7 Available
-              </span>
-            </div>
+    <main className={`${styles.page} ${themeClass}`}>
+      <div className={styles.card}>
+        <div className={`${styles.sliderContainer} ${sliderClass}`}>
+          {/* Login Panel (Always first in DOM) */}
+          <div className={styles.panel}>
+            {currentRole === 'patient' ? <PatientLoginPage /> : 
+             currentRole === 'doctor' ? <DoctorLoginPage /> : 
+             <AdminLoginPage />}
+          </div>
+          
+          {/* Signup Panel (Always second in DOM) - Only for patient and doctor */}
+          <div className={styles.panel}>
+            {currentRole === 'patient' ? <PatientSignupPage /> : 
+             currentRole === 'doctor' ? <DoctorSignupPage /> : 
+             <AdminLoginPage />}
           </div>
         </div>
-      </header>
-
-      {/* Navbar */}
-      <nav className={styles.navbar}>
-        <div className={styles.logo}>HealthMate</div>
-        <div className={styles.navLinks}>
-          <Link href="/">Home</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Contact</Link>
-        </div>
-      </nav>
-
-      {/* Slider */}
-      <main className={styles.page}>
-        <div className={styles.card}>
-          <div
-            className={`${styles.container} ${
-              isSignup ? styles.signup : styles.login
-            }`}
-          >
-            <div className={styles.panel}>
-              {!isSignup && children}
-            </div>
-
-            <div className={styles.panel}>
-              {isSignup && children}
-            </div>
-          </div>
-        </div>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }

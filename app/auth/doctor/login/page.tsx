@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "../../auth.module.css";
 import { loginDoctor } from "@/lib/auth/auth";
 import { AxiosError } from "axios";
@@ -31,66 +30,73 @@ export default function DoctorLoginPage() {
       }
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
-      setError(
-        axiosError.response?.data?.message ||
-        "Invalid email or password"
-      );
+      if (axiosError.response) {
+        setError(
+          axiosError.response.data?.message || "Invalid email or password"
+        );
+      } else if (axiosError.request) {
+        setError("Unable to connect to server. Please try again.");
+      } else {
+        setError("An unexpected error occurred.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const goToSignup = () => {
+    router.push("/auth/doctor/signup");
+  };
+
   return (
-    <div className={`${styles.page} ${styles.themeDoctor}`}>
-      <div className={styles.card}>
-        <div className={`${styles.container} ${styles.login}`}>
-          <div className={styles.panel}>
-            <div className={styles.panelInner}>
-
-              {/* LEFT: LOGIN */}
-              <div className={styles.form}>
-                <h1>Doctor Sign In</h1>
-
-                {error && <p className={styles.error}>{error}</p>}
-
-                <form onSubmit={handleLogin}>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? "Signing in..." : "Sign In"}
-                  </button>
-                </form>
-              </div>
-
-              {/* RIGHT: CTA */}
-              <div className={styles.red}>
-                <h1>Hello, Doctor!</h1>
-                <p>Login to manage your patients</p>
-                <Link href="/auth/doctor/signup">
-                  <button>SIGN UP</button>
-                </Link>
-              </div>
-
-            </div>
-          </div>
+    <>
+      {/* Left: Login Form */}
+      <div className={styles.formPanel}>
+        <div className={styles.formLogo}>
+         
         </div>
+        
+        <h1>Doctor Sign In</h1>
+
+        {error && <p className={styles.error}>{error}</p>}
+
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Doctor Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            required
+          />
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <p className={styles.availability}>
+         
+        </p>
       </div>
-    </div>
+
+      {/* Right: CTA Panel */}
+      <div className={styles.ctaPanel}>
+        <h1>Hello, Doctor!</h1>
+        <p>Join our network and start helping patients</p>
+        <button onClick={goToSignup}>
+          REGISTER
+        </button>
+      </div>
+    </>
   );
 }

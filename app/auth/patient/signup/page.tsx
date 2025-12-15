@@ -1,11 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "../../auth.module.css";
-import { loginPatient } from "@/lib/auth/auth";
-import { AxiosError } from "axios";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -27,25 +24,33 @@ export default function SignupPage() {
     }
 
     setLoading(true);
+    // TODO: Implement actual signup logic here
+    setTimeout(() => {
+      router.push("/auth/patient/login");
+    }, 1000);
+  };
 
-   
-  router.push("/auth/patient/login");
-}
+  const goToLogin = () => {
+    router.push("/auth/patient/login");
+  };
 
   return (
-   <div className={`${styles.page} ${styles.themePatient}`}>
-
-      {/* LEFT PANEL */}
-      <div className={styles.red}>
+    <>
+      {/* Left: CTA Panel */}
+      <div className={styles.ctaPanel}>
         <h1>Welcome Back!</h1>
         <p>To keep connected with us please login</p>
-        <Link href="/auth/patient/login">
-          <button>SIGN IN</button>
-        </Link>
+        <button onClick={goToLogin}>
+          SIGN IN
+        </button>
       </div>
 
-      {/* RIGHT PANEL */}
-      <div className={styles.form}>
+      {/* Right: Signup Form */}
+      <div className={`${styles.formPanel} ${styles.signupForm}`}>
+        <div className={styles.formLogo}>
+         
+        </div>
+        
         <h1>Create Account</h1>
 
         {error && <p className={styles.error}>{error}</p>}
@@ -56,6 +61,7 @@ export default function SignupPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            disabled={loading}
           />
 
           <input
@@ -64,6 +70,7 @@ export default function SignupPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading}
           />
 
           <input
@@ -72,6 +79,7 @@ export default function SignupPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading}
           />
 
           <input
@@ -80,6 +88,7 @@ export default function SignupPage() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
+            disabled={loading}
           />
 
           <button type="submit" disabled={loading}>
@@ -87,6 +96,6 @@ export default function SignupPage() {
           </button>
         </form>
       </div>
-    </div>
+    </>
   );
 }

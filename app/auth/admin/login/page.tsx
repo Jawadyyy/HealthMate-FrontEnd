@@ -40,60 +40,57 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className={`${styles.page} ${styles.themeAdmin}`}>
-      <div className={styles.card}>
-        <div className={`${styles.container} ${styles.login}`}>
-          <div className={styles.panel}>
-            <div className={styles.panelInner}>
-
-              {/* LEFT: INFO PANEL */}
-              <div className={styles.red}>
-                <h1>System Control Panel</h1>
-                <p>
-                  This area is reserved for system administrators.
-                  All actions are logged and monitored.
-                </p>
-                <p style={{ opacity: 0.85, fontSize: "13px" }}>
-                  Unauthorized access is prohibited.
-                </p>
-              </div>
-
-              {/* RIGHT: ADMIN LOGIN */}
-              <div className={styles.form}>
-                <h1>Admin Login</h1>
-                <p>Restricted access. Authorized personnel only.</p>
-
-                {error && <p className={styles.error}>{error}</p>}
-
-                <form onSubmit={handleLogin}>
-                  <input
-                    type="email"
-                    placeholder="Admin Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-
-                  <button type="submit" disabled={loading}>
-                    {loading ? "Authenticating..." : "Sign In"}
-                  </button>
-                </form>
-              </div>
-
-            </div>
-          </div>
-        </div>
+    <>
+      {/* Left: CTA Panel */}
+      <div className={styles.ctaPanel}>
+        <h1>System Control Panel</h1>
+        <p>
+          This area is reserved for system administrators.
+          All actions are logged and monitored.
+        </p>
+        <p style={{ opacity: 0.85, fontSize: "13px", marginTop: "20px" }}>
+          Unauthorized access is prohibited.
+        </p>
       </div>
-    </div>
+
+      {/* Right: Admin Login Form */}
+      <div className={styles.formPanel}>
+        <div className={styles.formLogo}>
+          <h2>HealthMate</h2>
+          <p>Admin Portal</p>
+        </div>
+        
+        <h1>Admin Login</h1>
+        <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>
+          Restricted access. Authorized personnel only.
+        </p>
+
+        {error && <p className={styles.error}>{error}</p>}
+
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Admin Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            required
+          />
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Authenticating..." : "Sign In"}
+          </button>
+        </form>
+      </div>
+    </>
   );
 }
