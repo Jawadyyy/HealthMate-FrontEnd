@@ -57,7 +57,7 @@ function DashboardCard({ title, value }: { title: string; value: string }) {
 
 function ActionCard({ title, desc }: { title: string; desc: string }) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition">
+    <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg">
       <h3 className="text-lg font-semibold text-green-700">{title}</h3>
       <p className="text-sm text-gray-600 mt-2">{desc}</p>
       <button className="mt-4 text-green-600 font-semibold hover:underline">
@@ -66,3 +66,4 @@ function ActionCard({ title, desc }: { title: string; desc: string }) {
     </div>
   );
 }
+

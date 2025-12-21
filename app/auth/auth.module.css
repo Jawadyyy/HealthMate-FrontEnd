@@ -187,6 +187,61 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
+/* ================= SELECT DROPDOWNS ================= */
+
+.formPanel select {
+  width: 100%;
+  padding: 15px 17px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  border-radius: 9px;
+  border: 1px solid #ddd;
+  background: #f7f7f7;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.formPanel select:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+/* ================= TEXTAREA ================= */
+
+.textarea {
+  width: 100%;
+  padding: 15px 17px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  border-radius: 9px;
+  border: 1px solid #ddd;
+  background: #f7f7f7;
+  transition: all 0.25s ease;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.textarea:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+/* ================= STEP INDICATOR ================= */
+
+.stepIndicator {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+
 /* ================= FORM BUTTON ================= */
 
 .formPanel button {
@@ -217,6 +272,31 @@
 .formPanel button:active {
   transform: scale(0.96);
 }
+
+/* ================= BUTTON GROUP (for multi-step forms) ================= */
+
+.buttonGroup {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.buttonGroup button {
+  flex: 1;
+  margin-top: 0;
+}
+
+.backButton {
+  background: transparent !important;
+  color: var(--primary) !important;
+  border: 2px solid var(--primary) !important;
+}
+
+.backButton:hover {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
 
 /* ================= ERROR ================= */
 
@@ -311,22 +391,31 @@
 
 /* Signup form needs less vertical padding to fit more inputs */
 .signupForm {
-  padding: clamp(40px, 3vw, 60px) !important;
-  /* Reduced padding */
+  padding: clamp(35px, 3vw, 55px) clamp(25px, 2vw, 45px) clamp(25px, 2vw, 45px) !important;
+  /* Top padding larger, sides and bottom smaller */
+  overflow-y: auto;
+  /* Allow scrolling if needed */
+  max-height: 100%;
 }
 
 .signupForm h1 {
-  margin-bottom: 20px !important;
-  /* Reduced margin */
-  font-size: 28px !important;
-  /* Slightly smaller font */
+  margin-bottom: 10px !important;
+  /* Further reduced margin */
+  font-size: 24px !important;
+  /* Smaller font */
 }
+
+.stepIndicator {
+  margin-bottom: 15px !important;
+  /* Reduced margin */
+}
+
 
 /* More compact input fields */
 .signupForm input {
-  padding: 10px 12px !important;
+  padding: 8px 10px !important;
   /* Smaller padding */
-  margin-bottom: 12px !important;
+  margin-bottom: 8px !important;
   /* Reduced spacing between inputs */
   font-size: 13px !important;
   /* Slightly smaller font */
@@ -334,32 +423,55 @@
   /* Slightly less rounded */
 }
 
+/* Apply same compact styles to select and textarea */
+.signupForm select,
+.signupForm .textarea {
+  padding: 8px 10px !important;
+  margin-bottom: 8px !important;
+  font-size: 13px !important;
+  border-radius: 7px !important;
+}
+
+.signupForm .textarea {
+  min-height: 60px !important;
+  /* Smaller textarea */
+}
+
+
+
 /* Make the logo smaller in signup form */
 .signupForm .formLogo {
-  margin-bottom: 25px !important;
-  /* Reduced margin */
+  margin-bottom: 15px !important;
+  /* Further reduced margin */
 }
 
 .signupForm .formLogo h2 {
-  font-size: 22px !important;
+  font-size: 20px !important;
   /* Smaller logo text */
-  margin-bottom: 4px !important;
+  margin-bottom: 2px !important;
 }
 
 .signupForm .formLogo p {
-  font-size: 13px !important;
+  font-size: 12px !important;
   /* Smaller subtitle */
 }
 
 /* Smaller button in signup form */
 .signupForm button {
-  margin-top: 12px !important;
+  margin-top: 8px !important;
   /* Reduced margin */
-  padding: 12px 0 !important;
+  padding: 10px 0 !important;
   /* Smaller button */
   font-size: 13px !important;
   /* Smaller text */
 }
+
+/* Button group spacing */
+.signupForm .buttonGroup {
+  margin-top: 8px !important;
+  gap: 8px !important;
+}
+
 
 /* =====================================================
    RESPONSIVE (MOBILE) - Disable sliding on mobile
@@ -402,8 +514,31 @@
   }
 
   .signupForm {
-    padding: 40px 30px !important;
+    padding: 20px 25px !important;
+    /* Even more compact on mobile */
   }
+
+  .signupForm h1 {
+    font-size: 22px !important;
+  }
+
+  .signupForm input,
+  .signupForm select,
+  .signupForm .textarea {
+    padding: 7px 9px !important;
+    margin-bottom: 7px !important;
+    font-size: 12px !important;
+  }
+
+  .signupForm .textarea {
+    min-height: 50px !important;
+  }
+
+  .signupForm button {
+    padding: 9px 0 !important;
+    font-size: 12px !important;
+  }
+
 
   .homeButton {
     top: 15px;
@@ -434,6 +569,37 @@
   }
 
   .signupForm {
-    padding: 35px 25px !important;
+    padding: 15px 20px !important;
+    /* Extra compact for very small screens */
+  }
+
+  .signupForm h1 {
+    font-size: 20px !important;
+  }
+
+  .signupForm .stepIndicator {
+    font-size: 11px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .signupForm input,
+  .signupForm select,
+  .signupForm .textarea {
+    padding: 6px 8px !important;
+    margin-bottom: 6px !important;
+    font-size: 11px !important;
+  }
+
+  .signupForm .textarea {
+    min-height: 45px !important;
+  }
+
+  .signupForm button {
+    padding: 8px 0 !important;
+    font-size: 11px !important;
+  }
+
+  .signupForm .buttonGroup {
+    gap: 6px !important;
   }
 }
