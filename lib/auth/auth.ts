@@ -41,6 +41,10 @@ export const createPatientProfile = async (profileData: PatientProfileData) => {
   return await api.post('/patients/create', profileData);
 };
 
+export const getPatientProfile = async () => {
+  return await api.get('/patients/me');
+};
+
 interface DoctorProfileData {
   fullName: string;
   specialization: string;
