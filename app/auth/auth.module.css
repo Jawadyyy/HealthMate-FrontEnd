@@ -39,18 +39,65 @@
   width: min(800px, 95%);
   min-height: 480px;
   border-radius: 14px;
-  overflow: hidden; /* IMPORTANT: Hide overflow for sliding effect */
+  overflow: hidden;
+  /* IMPORTANT: Hide overflow for sliding effect */
   background: #ffffff;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.18);
   position: relative;
 }
 
 /* =====================================================
+   HOME BUTTON (Top right corner)
+===================================================== */
+
+.homeButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.homeButton:hover {
+  background: var(--primary);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.homeButton svg {
+  transition: transform 0.3s ease;
+}
+
+.homeButton:hover svg {
+  transform: scale(1.1);
+}
+
+.homeButton:active {
+  transform: translateY(0);
+}
+
+
+/* =====================================================
    SLIDER CONTAINER (For animation)
 ===================================================== */
 
 .sliderContainer {
-  width: 200%; /* Double width to hold both panels side by side */
+  width: 200%;
+  /* Double width to hold both panels side by side */
   height: 100%;
   display: flex;
   position: absolute;
@@ -74,7 +121,8 @@
 ===================================================== */
 
 .panel {
-  width: 50%; /* Each panel takes half of the 200% container */
+  width: 50%;
+  /* Each panel takes half of the 200% container */
   height: 100%;
   display: flex;
 }
@@ -263,41 +311,54 @@
 
 /* Signup form needs less vertical padding to fit more inputs */
 .signupForm {
-  padding: clamp(40px, 3vw, 60px) !important; /* Reduced padding */
+  padding: clamp(40px, 3vw, 60px) !important;
+  /* Reduced padding */
 }
 
 .signupForm h1 {
-  margin-bottom: 20px !important; /* Reduced margin */
-  font-size: 28px !important; /* Slightly smaller font */
+  margin-bottom: 20px !important;
+  /* Reduced margin */
+  font-size: 28px !important;
+  /* Slightly smaller font */
 }
 
 /* More compact input fields */
 .signupForm input {
-  padding: 10px 12px !important; /* Smaller padding */
-  margin-bottom: 12px !important; /* Reduced spacing between inputs */
-  font-size: 13px !important; /* Slightly smaller font */
-  border-radius: 7px !important; /* Slightly less rounded */
+  padding: 10px 12px !important;
+  /* Smaller padding */
+  margin-bottom: 12px !important;
+  /* Reduced spacing between inputs */
+  font-size: 13px !important;
+  /* Slightly smaller font */
+  border-radius: 7px !important;
+  /* Slightly less rounded */
 }
 
 /* Make the logo smaller in signup form */
 .signupForm .formLogo {
-  margin-bottom: 25px !important; /* Reduced margin */
+  margin-bottom: 25px !important;
+  /* Reduced margin */
 }
 
 .signupForm .formLogo h2 {
-  font-size: 22px !important; /* Smaller logo text */
+  font-size: 22px !important;
+  /* Smaller logo text */
   margin-bottom: 4px !important;
 }
 
 .signupForm .formLogo p {
-  font-size: 13px !important; /* Smaller subtitle */
+  font-size: 13px !important;
+  /* Smaller subtitle */
 }
 
 /* Smaller button in signup form */
 .signupForm button {
-  margin-top: 12px !important; /* Reduced margin */
-  padding: 12px 0 !important; /* Smaller button */
-  font-size: 13px !important; /* Smaller text */
+  margin-top: 12px !important;
+  /* Reduced margin */
+  padding: 12px 0 !important;
+  /* Smaller button */
+  font-size: 13px !important;
+  /* Smaller text */
 }
 
 /* =====================================================
@@ -309,13 +370,15 @@
     width: 95%;
     min-height: auto;
     margin: 20px 0;
-    overflow: visible; /* Allow scrolling on mobile */
+    overflow: visible;
+    /* Allow scrolling on mobile */
   }
 
   .sliderContainer {
     width: 100%;
     position: relative;
-    transform: none !important; /* Disable sliding on mobile */
+    transform: none !important;
+    /* Disable sliding on mobile */
     flex-direction: column;
     transition: none !important;
   }
@@ -334,15 +397,29 @@
   }
 
   .ctaPanel {
-    order: -1; /* CTA panel on top for mobile */
+    order: -1;
+    /* CTA panel on top for mobile */
   }
 
   .signupForm {
     padding: 40px 30px !important;
   }
+
+  .homeButton {
+    top: 15px;
+    right: 15px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .homeButton svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 @media (max-width: 480px) {
+
   .formPanel,
   .ctaPanel {
     padding: 40px 25px !important;
