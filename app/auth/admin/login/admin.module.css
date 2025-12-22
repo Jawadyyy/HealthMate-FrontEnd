@@ -1,0 +1,246 @@
+/* admin.module.css */
+
+/* =====================================================
+   THEME VARIABLES
+===================================================== */
+:root {
+  --primary: #7c3aed;
+  --primary-dark: #5b21b6;
+}
+
+/* =====================================================
+   PAGE CONTAINER
+===================================================== */
+.adminPage {
+  min-height: 90vh; /* 10% smaller */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fb;
+  padding: 18px; /* 10% smaller */
+}
+
+/* =====================================================
+   CARD CONTAINER
+===================================================== */
+.adminCard {
+  width: 100%;
+  max-width: 810px; /* 10% smaller */
+  min-height: 450px; /* 10% smaller */
+  background: white;
+  border-radius: 9px; /* 10% smaller */
+  box-shadow: 0 9px 36px rgba(0, 0, 0, 0.09); /* 10% smaller */
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+/* =====================================================
+   HOME BUTTON
+===================================================== */
+.homeButton {
+  position: absolute;
+  top: 18px; /* 10% smaller */
+  right: 18px; /* 10% smaller */
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 7.2px; /* 10% smaller */
+  padding: 7.2px 14.4px; /* 10% smaller */
+  border-radius: 18px; /* 10% smaller */
+  background: white;
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+  font-weight: 500;
+  text-decoration: none;
+  border: 0.9px solid #e0e0e0; /* 10% smaller */
+  box-shadow: 0 1.8px 7.2px rgba(0, 0, 0, 0.072); /* 10% smaller */
+  transition: all 0.2s;
+}
+
+.homeButton:hover {
+  background: #f8f9fa;
+  transform: translateY(-0.9px); /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(0, 0, 0, 0.09); /* 10% smaller */
+}
+
+/* =====================================================
+   LEFT: INFO PANEL (Purple)
+===================================================== */
+.infoPanel {
+  width: 50%;
+  padding: 72px 54px; /* 10% smaller */
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.infoPanel h1 {
+  font-size: 25.2px; /* 10% smaller */
+  font-weight: 600;
+  margin-bottom: 18px; /* 10% smaller */
+  line-height: 1.3;
+}
+
+.infoPanel p {
+  font-size: 14.4px; /* 10% smaller */
+  line-height: 1.6;
+  margin-bottom: 13.5px; /* 10% smaller */
+  opacity: 0.9;
+  max-width: 288px; /* 10% smaller */
+}
+
+.infoPanel .warning {
+  font-size: 11.7px; /* 10% smaller */
+  margin-top: 27px; /* 10% smaller */
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* =====================================================
+   RIGHT: LOGIN FORM
+===================================================== */
+.loginPanel {
+  width: 50%;
+  padding: 72px 54px; /* 10% smaller */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: white;
+}
+
+.adminLogo {
+  text-align: center;
+  margin-bottom: 36px; /* 10% smaller */
+}
+
+.adminLogo h2 {
+  color: #7c3aed;
+  font-size: 21.6px; /* 10% smaller */
+  font-weight: 700;
+  margin-bottom: 4.5px; /* 10% smaller */
+}
+
+.adminLogo p {
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+}
+
+.loginPanel h1 {
+  font-size: 21.6px; /* 10% smaller */
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 9px; /* 10% smaller */
+}
+
+.loginPanel > p {
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+  margin-bottom: 27px; /* 10% smaller */
+}
+
+/* Form Inputs */
+.loginPanel input {
+  width: 100%;
+  padding: 10.8px 12.6px; /* 10% smaller */
+  margin-bottom: 14.4px; /* 10% smaller */
+  border: 0.9px solid #ddd; /* 10% smaller */
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  background: #f9f9f9;
+  transition: all 0.2s;
+}
+
+.loginPanel input:focus {
+  outline: none;
+  border-color: #7c3aed;
+  background: white;
+  box-shadow: 0 0 0 2.7px rgba(124, 58, 237, 0.09); /* 10% smaller */
+}
+
+/* Login Button */
+.loginPanel button[type="submit"] {
+  width: 100%;
+  padding: 10.8px; /* 10% smaller */
+  background: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 9px; /* 10% smaller */
+  transition: all 0.2s;
+}
+
+.loginPanel button[type="submit"]:hover {
+  background: #5b21b6;
+  transform: translateY(-0.9px); /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(124, 58, 237, 0.27); /* 10% smaller */
+}
+
+.loginPanel button[type="submit"]:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.adminError {
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 9px 10.8px; /* 10% smaller */
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  margin-bottom: 14.4px; /* 10% smaller */
+  border-left: 3.6px solid #dc2626; /* 10% smaller */
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
+@media (max-width: 768px) {
+  .adminCard {
+    flex-direction: column;
+    min-height: auto;
+    max-width: 95%;
+    margin: 18px 0; /* 10% smaller */
+  }
+  
+  .infoPanel,
+  .loginPanel {
+    width: 100%;
+    padding: 36px 27px !important; /* 10% smaller */
+  }
+  
+  .homeButton {
+    top: 13.5px; /* 10% smaller */
+    right: 13.5px; /* 10% smaller */
+    padding: 5.4px 10.8px; /* 10% smaller */
+    font-size: 11.7px; /* 10% smaller */
+  }
+}
+
+@media (max-width: 480px) {
+  .infoPanel,
+  .loginPanel {
+    padding: 27px 18px !important; /* 10% smaller */
+  }
+  
+  .infoPanel h1 {
+    font-size: 19.8px; /* 10% smaller */
+  }
+  
+  .loginPanel h1 {
+    font-size: 18px; /* 10% smaller */
+  }
+  
+  .loginPanel input {
+    padding: 9px 10.8px; /* 10% smaller */
+    font-size: 11.7px; /* 10% smaller */
+  }
+}

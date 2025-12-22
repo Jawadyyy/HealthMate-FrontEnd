@@ -1,7 +1,6 @@
 /* =====================================================
    THEME VARIABLES
 ===================================================== */
-
 .themePatient {
   --primary: #2563eb;
   --primary-dark: #1e40af;
@@ -12,314 +11,136 @@
   --primary-dark: #166534;
 }
 
-.themeAdmin {
-  --primary: #7c3aed;
-  --primary-dark: #5b21b6;
-}
-
 /* =====================================================
-   PAGE (Used in layout.tsx)
+   COMMON BASE STYLES
 ===================================================== */
-
 .page {
-  min-height: 100vh;
+  min-height: 90vh; /* 10% smaller */
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f4f6fb;
-  overflow-x: hidden;
+  background: #f5f7fb;
+  padding: 18px; /* 10% smaller */
 }
-
-/* =====================================================
-   CARD (Outer container)
-===================================================== */
 
 .card {
-  width: min(800px, 95%);
-  min-height: 480px;
-  border-radius: 14px;
-  overflow: hidden;
-  /* IMPORTANT: Hide overflow for sliding effect */
-  background: #ffffff;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.18);
+  width: 100%;
+  max-width: 900px; /* 10% smaller */
+  max-height: 495px; /* 10% smaller */
+  background: white;
+  border-radius: 9px; /* 10% smaller */
+  box-shadow: 0 9px 36px rgba(0, 0, 0, 0.09); /* 10% smaller */
   position: relative;
+  overflow: hidden;
 }
-
-/* =====================================================
-   HOME BUTTON (Top right corner)
-===================================================== */
 
 .homeButton {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 18px; /* 10% smaller */
+  right: 18px; /* 10% smaller */
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 25px;
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--primary);
-  font-size: 14px;
-  font-weight: 600;
+  gap: 7.2px; /* 10% smaller */
+  padding: 7.2px 14.4px; /* 10% smaller */
+  border-radius: 18px; /* 10% smaller */
+  background: white;
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+  font-weight: 500;
   text-decoration: none;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  cursor: pointer;
+  border: 0.9px solid #e0e0e0; /* 10% smaller */
+  box-shadow: 0 1.8px 7.2px rgba(0, 0, 0, 0.072); /* 10% smaller */
+  transition: all 0.2s;
 }
 
 .homeButton:hover {
-  background: var(--primary);
-  color: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.homeButton svg {
-  transition: transform 0.3s ease;
-}
-
-.homeButton:hover svg {
-  transform: scale(1.1);
-}
-
-.homeButton:active {
-  transform: translateY(0);
-}
-
-
-/* =====================================================
-   SLIDER CONTAINER (For animation)
-===================================================== */
-
-.sliderContainer {
-  width: 200%;
-  /* Double width to hold both panels side by side */
-  height: 100%;
-  display: flex;
-  position: absolute;
-  top: 0;
-  left: 0;
-  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-/* Show login panel */
-.showLogin {
-  transform: translateX(0%);
-}
-
-/* Show signup panel */
-.showSignup {
-  transform: translateX(-50%);
+  background: #f8f9fa;
+  transform: translateY(-0.9px); /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(0, 0, 0, 0.09); /* 10% smaller */
 }
 
 /* =====================================================
-   PANEL (Each panel holds one full view)
+   PATIENT SPECIFIC STYLES - MATCHES IMAGE 4
 ===================================================== */
-
-.panel {
-  width: 50%;
-  /* Each panel takes half of the 200% container */
-  height: 100%;
-  display: flex;
-}
-
-/* =====================================================
-   FORM PANEL (White side)
-===================================================== */
-
-.formPanel {
+/* PATIENT LOGIN FORM (Left side) */
+.themePatient .formPanel {
   width: 50%;
   height: 100%;
-  padding: clamp(60px, 5vw, 80px);
-  background: #ffffff;
+  padding: 110.7px 54px; /* 10% smaller */
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: white;
 }
 
-.formPanel h1 {
-  font-size: 32px;
+.themePatient .formLogo h2 {
+  color: #2563eb;
+  font-size: 25.2px; /* 10% smaller */
   font-weight: 700;
-  color: #222;
-  margin-bottom: 20px;
-}
-
-/* Logo styling */
-.formLogo {
-  margin-bottom: 40px;
+  margin-bottom: 4.5px; /* 10% smaller */
   text-align: center;
 }
 
-.formLogo h2 {
-  color: var(--primary);
-  font-size: 26px;
-  margin-bottom: 8px;
-  font-weight: 700;
-}
-
-.formLogo p {
+.themePatient .formLogo p {
   color: #666;
-  font-size: 15px;
-  opacity: 0.8;
-}
-
-/* ================= INPUTS ================= */
-
-.formPanel input {
-  width: 100%;
-  padding: 15px 17px;
-  margin-bottom: 16px;
-  font-size: 15px;
-  border-radius: 9px;
-  border: 1px solid #ddd;
-  background: #f7f7f7;
-  transition: all 0.25s ease;
-}
-
-.formPanel input:focus {
-  outline: none;
-  background: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-/* ================= SELECT DROPDOWNS ================= */
-
-.formPanel select {
-  width: 100%;
-  padding: 15px 17px;
-  margin-bottom: 16px;
-  font-size: 15px;
-  border-radius: 9px;
-  border: 1px solid #ddd;
-  background: #f7f7f7;
-  transition: all 0.25s ease;
-  cursor: pointer;
-}
-
-.formPanel select:focus {
-  outline: none;
-  background: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-/* ================= TEXTAREA ================= */
-
-.textarea {
-  width: 100%;
-  padding: 15px 17px;
-  margin-bottom: 16px;
-  font-size: 15px;
-  border-radius: 9px;
-  border: 1px solid #ddd;
-  background: #f7f7f7;
-  transition: all 0.25s ease;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 80px;
-}
-
-.textarea:focus {
-  outline: none;
-  background: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-/* ================= STEP INDICATOR ================= */
-
-.stepIndicator {
+  font-size: 12.6px; /* 10% smaller */
   text-align: center;
-  color: #666;
-  font-size: 13px;
-  margin-bottom: 20px;
+}
+
+.themePatient .formPanel h1 {
+  font-size: 28.8px; /* 10% smaller */
   font-weight: 600;
+  color: #222;
+  margin-bottom: 27px; /* 10% smaller */
+  text-align: center;
 }
 
-
-/* ================= FORM BUTTON ================= */
-
-.formPanel button {
-  margin-top: 15px;
-  padding: 14px 0;
+.themePatient .formPanel input {
   width: 100%;
-  border-radius: 30px;
+  padding: 12.6px 14.4px; /* 10% smaller */
+  margin-bottom: 18px; /* 10% smaller */
+  border: 0.9px solid #ddd; /* 10% smaller */
+  border-radius: 7.2px; /* 10% smaller */
+  font-size: 13.5px; /* 10% smaller */
+  background: #f9f9f9;
+  transition: all 0.2s;
+}
+
+.themePatient .formPanel input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: white;
+  box-shadow: 0 0 0 2.7px rgba(37, 99, 235, 0.09); /* 10% smaller */
+}
+
+.themePatient .formPanel button[type="submit"] {
+  width: 100%;
+  padding: 12.6px; /* 10% smaller */
+  background: #2563eb;
+  color: white;
   border: none;
-  background: linear-gradient(to right, var(--primary), var(--primary-dark));
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 1px;
+  border-radius: 7.2px; /* 10% smaller */
+  font-size: 14.4px; /* 10% smaller */
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  margin-top: 9px; /* 10% smaller */
+  transition: all 0.2s;
 }
 
-.formPanel button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 35%, transparent);
+.themePatient .formPanel button[type="submit"]:hover {
+  background: #1d4ed8;
+  transform: translateY(-0.9px); /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(37, 99, 235, 0.27); /* 10% smaller */
 }
 
-.formPanel button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.formPanel button:active {
-  transform: scale(0.96);
-}
-
-/* ================= BUTTON GROUP (for multi-step forms) ================= */
-
-.buttonGroup {
-  display: flex;
-  gap: 12px;
-  margin-top: 15px;
-}
-
-.buttonGroup button {
-  flex: 1;
-  margin-top: 0;
-}
-
-.backButton {
-  background: transparent !important;
-  color: var(--primary) !important;
-  border: 2px solid var(--primary) !important;
-}
-
-.backButton:hover {
-  background: var(--primary) !important;
-  color: #ffffff !important;
-}
-
-
-/* ================= ERROR ================= */
-
-.error {
-  color: #dc2626;
-  font-size: 14px;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  background: #fef2f2;
-  border-radius: 6px;
-  border-left: 4px solid #dc2626;
-}
-
-/* =====================================================
-   CTA PANEL (Colored side)
-===================================================== */
-
-.ctaPanel {
+/* PATIENT CTA PANEL (Right side) */
+.themePatient .ctaPanel {
   width: 50%;
-  height: 100%;
-  padding: clamp(70px, 6vw, 100px);
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #ffffff;
+  padding: 90px 54px; /* 10% smaller */
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -327,279 +148,367 @@
   text-align: center;
 }
 
-.ctaPanel h1 {
-  font-size: 34px;
+.themePatient .ctaPanel h1 {
+  font-size: 32.4px; /* 10% smaller */
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 27px; /* 10% smaller */
   line-height: 1.2;
 }
 
-.ctaPanel p {
-  font-size: 16px;
+.themePatient .ctaPanel p {
+  font-size: 14.4px; /* 10% smaller */
   line-height: 1.6;
-  opacity: 0.95;
-  margin-bottom: 32px;
-  max-width: 280px;
+  margin-bottom: 36px; /* 10% smaller */
+  opacity: 0.9;
+  max-width: 270px; /* 10% smaller */
 }
 
-/* ================= CTA BUTTON ================= */
-
-.ctaPanel button {
-  padding: 14px 50px;
-  border-radius: 30px;
-  border: 2px solid #ffffff;
+.themePatient .ctaPanel button {
+  padding: 10.8px 45px; /* 10% smaller */
   background: transparent;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 1px;
+  color: white;
+  border: 1.8px solid white; /* 10% smaller */
+  border-radius: 27px; /* 10% smaller */
+  font-size: 13.5px; /* 10% smaller */
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
 }
 
-.ctaPanel button:hover {
-  background: #ffffff;
-  color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2);
+.themePatient .ctaPanel button:hover {
+  background: white;
+  color: #2563eb;
 }
 
-.ctaPanel button:active {
-  transform: scale(0.96);
-}
-
-/* =====================================================
-   AVAILABILITY TEXT (Login only)
-===================================================== */
-
-.availability {
-  margin-top: 25px;
-  font-size: 13px;
-  color: #888;
+.themePatient .availability {
+  margin-top: 18px; /* 10% smaller */
+  font-size: 11.7px; /* 10% smaller */
+  color: #666;
   text-align: center;
   font-style: italic;
 }
 
 /* =====================================================
-   SIGNUP FORM SPECIFIC STYLES
+   DOCTOR SPECIFIC STYLES - MATCHES IMAGE 1
 ===================================================== */
+/* DOCTOR LOGIN FORM (Left side) */
+.themeDoctor .formPanel {
+  width: 50%;
+  height: 100%;
+  padding: 110.7px 45px; /* 10% smaller */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: white;
+}
 
-/* Signup form needs different padding for more inputs */
+.themeDoctor .formLogo h2 {
+  color: #16a34a;
+  font-size: 23.4px; /* 10% smaller */
+  font-weight: 700;
+  margin-bottom: 4.5px; /* 10% smaller */
+  text-align: left;
+}
+
+.themeDoctor .formLogo p {
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+  text-align: left;
+}
+
+.themeDoctor .formPanel h1 {
+  font-size: 21.6px; /* 10% smaller */
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 9px; /* 10% smaller */
+  text-align: left;
+}
+
+.themeDoctor .formPanel > p {
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+  margin-bottom: 27px; /* 10% smaller */
+  text-align: left;
+}
+
+.themeDoctor .formPanel input {
+  width: 100%;
+  padding: 10.8px 12.6px; /* 10% smaller */
+  margin-bottom: 14.4px; /* 10% smaller */
+  border: 0.9px solid #ddd; /* 10% smaller */
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  background: #f9f9f9;
+  transition: all 0.2s;
+}
+
+.themeDoctor .formPanel input:focus {
+  outline: none;
+  border-color: #16a34a;
+  background: white;
+  box-shadow: 0 0 0 2.7px rgba(22, 163, 74, 0.09); /* 10% smaller */
+}
+
+.themeDoctor .formPanel button[type="submit"] {
+  width: 100%;
+  padding: 10.8px; /* 10% smaller */
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 7.2px; /* 10% smaller */
+  transition: all 0.2s;
+}
+
+.themeDoctor .formPanel button[type="submit"]:hover {
+  background: #15803d;
+  transform: translateY(-0.9px); /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(22, 163, 74, 0.27); /* 10% smaller */
+}
+
+/* DOCTOR CTA PANEL (Right side) */
+.themeDoctor .ctaPanel {
+  width: 50%;
+  padding: 72px 45px; /* 10% smaller */
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.themeDoctor .ctaPanel h1 {
+  font-size: 25.2px; /* 10% smaller */
+  font-weight: 600;
+  margin-bottom: 18px; /* 10% smaller */
+  line-height: 1.3;
+}
+
+.themeDoctor .ctaPanel p {
+  font-size: 13.5px; /* 10% smaller */
+  line-height: 1.5;
+  margin-bottom: 27px; /* 10% smaller */
+  opacity: 0.9;
+  max-width: 252px; /* 10% smaller */
+}
+
+.themeDoctor .ctaPanel button {
+  padding: 9px 36px; /* 10% smaller */
+  background: transparent;
+  color: white;
+  border: 1.8px solid white; /* 10% smaller */
+  border-radius: 27px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.themeDoctor .ctaPanel button:hover {
+  background: white;
+  color: #16a34a;
+}
+
+.themeDoctor .availability {
+  margin-top: 22.5px; /* 10% smaller */
+  font-size: 11.7px; /* 10% smaller */
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  text-align: center;
+}
+
 /* =====================================================
-   SIGNUP FORM SPECIFIC STYLES - MORE COMPACT
+   SIGNUP FORMS - SHARED STYLES
 ===================================================== */
-
-/* Signup form needs less vertical padding to fit more inputs */
 .signupForm {
-  padding: clamp(35px, 3vw, 55px) clamp(25px, 2vw, 45px) clamp(25px, 2vw, 45px) !important;
-  /* Top padding larger, sides and bottom smaller */
-  overflow-y: auto;
-  /* Allow scrolling if needed */
-  max-height: 100%;
+  width: 50%;
+  padding: 54px !important; /* 10% smaller */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .signupForm h1 {
-  margin-bottom: 10px !important;
-  /* Further reduced margin */
-  font-size: 24px !important;
-  /* Smaller font */
+  font-size: 25.2px !important; /* 10% smaller */
+  font-weight: 600 !important;
+  color: #222 !important;
+  margin-bottom: 9px !important; /* 10% smaller */
+}
+
+.signupForm > p {
+  color: #666;
+  font-size: 12.6px; /* 10% smaller */
+  margin-bottom: 27px; /* 10% smaller */
 }
 
 .stepIndicator {
-  margin-bottom: 15px !important;
-  /* Reduced margin */
+  color: #666;
+  font-size: 11.7px; /* 10% smaller */
+  font-weight: 500;
+  margin-bottom: 22.5px; /* 10% smaller */
 }
 
-
-/* More compact input fields */
-.signupForm input {
-  padding: 8px 10px !important;
-  /* Smaller padding */
-  margin-bottom: 8px !important;
-  /* Reduced spacing between inputs */
-  font-size: 13px !important;
-  /* Slightly smaller font */
-  border-radius: 7px !important;
-  /* Slightly less rounded */
-}
-
-/* Apply same compact styles to select and textarea */
+.signupForm input,
 .signupForm select,
-.signupForm .textarea {
-  padding: 8px 10px !important;
-  margin-bottom: 8px !important;
-  font-size: 13px !important;
-  border-radius: 7px !important;
+.signupForm textarea {
+  width: 100%;
+  padding: 10.8px 12.6px; /* 10% smaller */
+  margin-bottom: 14.4px; /* 10% smaller */
+  border: 0.9px solid #ddd; /* 10% smaller */
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  background: #f9f9f9;
+  transition: all 0.2s;
 }
 
-.signupForm .textarea {
-  min-height: 60px !important;
-  /* Smaller textarea */
+.signupForm input:focus,
+.signupForm select:focus,
+.signupForm textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 2.7px rgba(var(--primary-rgb), 0.09); /* 10% smaller */
 }
 
-
-
-/* Make the logo smaller in signup form */
-.signupForm .formLogo {
-  margin-bottom: 15px !important;
-  /* Further reduced margin */
+.signupForm button[type="submit"] {
+  width: 100%;
+  padding: 10.8px; /* 10% smaller */
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 9px; /* 10% smaller */
+  transition: all 0.2s;
 }
 
-.signupForm .formLogo h2 {
-  font-size: 20px !important;
-  /* Smaller logo text */
-  margin-bottom: 2px !important;
+.signupForm button[type="submit"]:hover {
+  background: var(--primary-dark);
+  transform: translateY(-0.9px); /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(var(--primary-rgb), 0.27); /* 10% smaller */
 }
 
-.signupForm .formLogo p {
-  font-size: 12px !important;
-  /* Smaller subtitle */
+.buttonGroup {
+  display: flex;
+  gap: 10.8px; /* 10% smaller */
+  margin-top: 18px; /* 10% smaller */
 }
 
-/* Smaller button in signup form */
-.signupForm button {
-  margin-top: 8px !important;
-  /* Reduced margin */
-  padding: 10px 0 !important;
-  /* Smaller button */
-  font-size: 13px !important;
-  /* Smaller text */
+.buttonGroup button {
+  flex: 1;
 }
 
-/* Button group spacing */
-.signupForm .buttonGroup {
-  margin-top: 8px !important;
-  gap: 8px !important;
+.backButton {
+  background: white !important;
+  color: var(--primary) !important;
+  border: 0.9px solid var(--primary) !important; /* 10% smaller */
 }
 
+.backButton:hover {
+  background: #f8f9fa !important;
+}
+
+.error {
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 9px 10.8px; /* 10% smaller */
+  border-radius: 5.4px; /* 10% smaller */
+  font-size: 12.6px; /* 10% smaller */
+  margin-bottom: 14.4px; /* 10% smaller */
+  border-left: 3.6px solid #dc2626; /* 10% smaller */
+}
 
 /* =====================================================
-   RESPONSIVE (MOBILE) - Disable sliding on mobile
+   SLIDER ANIMATION
 ===================================================== */
+.sliderContainer {
+  width: 200%;
+  display: flex;
+  height: 100%;
+  transition: transform 0.5s ease;
+}
 
-@media (max-width: 900px) {
+.showLogin {
+  transform: translateX(0);
+}
+
+.showSignup {
+  transform: translateX(-50%);
+}
+
+.panel {
+  width: 50%;
+  height: 100%;
+  display: flex;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
+@media (max-width: 768px) {
   .card {
-    width: 95%;
     min-height: auto;
-    margin: 20px 0;
-    overflow: visible;
-    /* Allow scrolling on mobile */
+    max-width: 95%;
+    margin: 18px 0; /* 10% smaller */
   }
-
+  
   .sliderContainer {
-    width: 100%;
-    position: relative;
-    transform: none !important;
-    /* Disable sliding on mobile */
     flex-direction: column;
-    transition: none !important;
+    width: 100%;
+    transform: none !important;
   }
-
+  
   .panel {
     width: 100%;
-    height: auto;
-    min-height: 480px;
-    flex-direction: column;
+    min-height: auto;
   }
-
-  .formPanel,
-  .ctaPanel {
-    width: 100%;
-    padding: 50px 35px !important;
-  }
-
-  .ctaPanel {
-    order: -1;
-    /* CTA panel on top for mobile */
-  }
-
+  
+  .themePatient .formPanel,
+  .themePatient .ctaPanel,
+  .themeDoctor .formPanel,
+  .themeDoctor .ctaPanel,
   .signupForm {
-    padding: 20px 25px !important;
-    /* Even more compact on mobile */
+    width: 100%;
+    padding: 36px 27px !important; /* 10% smaller */
   }
-
-  .signupForm h1 {
-    font-size: 22px !important;
-  }
-
-  .signupForm input,
-  .signupForm select,
-  .signupForm .textarea {
-    padding: 7px 9px !important;
-    margin-bottom: 7px !important;
-    font-size: 12px !important;
-  }
-
-  .signupForm .textarea {
-    min-height: 50px !important;
-  }
-
-  .signupForm button {
-    padding: 9px 0 !important;
-    font-size: 12px !important;
-  }
-
-
+  
   .homeButton {
-    top: 15px;
-    right: 15px;
-    padding: 8px 14px;
-    font-size: 13px;
-  }
-
-  .homeButton svg {
-    width: 16px;
-    height: 16px;
+    top: 13.5px; /* 10% smaller */
+    right: 13.5px; /* 10% smaller */
+    padding: 5.4px 10.8px; /* 10% smaller */
+    font-size: 11.7px; /* 10% smaller */
   }
 }
 
 @media (max-width: 480px) {
-
-  .formPanel,
-  .ctaPanel {
-    padding: 40px 25px !important;
-  }
-
-  .formPanel h1 {
-    font-size: 28px;
-  }
-
-  .ctaPanel h1 {
-    font-size: 30px;
-  }
-
+  .themePatient .formPanel,
+  .themePatient .ctaPanel,
+  .themeDoctor .formPanel,
+  .themeDoctor .ctaPanel,
   .signupForm {
-    padding: 15px 20px !important;
-    /* Extra compact for very small screens */
+    padding: 27px 18px !important; /* 10% smaller */
   }
-
-  .signupForm h1 {
-    font-size: 20px !important;
+  
+  .themePatient .formPanel h1 {
+    font-size: 23.4px; /* 10% smaller */
   }
-
-  .signupForm .stepIndicator {
-    font-size: 11px !important;
-    margin-bottom: 10px !important;
+  
+  .themeDoctor .formPanel h1 {
+    font-size: 19.8px; /* 10% smaller */
   }
-
-  .signupForm input,
-  .signupForm select,
-  .signupForm .textarea {
-    padding: 6px 8px !important;
-    margin-bottom: 6px !important;
-    font-size: 11px !important;
+  
+  .themePatient .ctaPanel h1 {
+    font-size: 25.2px; /* 10% smaller */
   }
-
-  .signupForm .textarea {
-    min-height: 45px !important;
-  }
-
-  .signupForm button {
-    padding: 8px 0 !important;
-    font-size: 11px !important;
-  }
-
-  .signupForm .buttonGroup {
-    gap: 6px !important;
+  
+  .themeDoctor .ctaPanel h1 {
+    font-size: 21.6px; /* 10% smaller */
   }
 }

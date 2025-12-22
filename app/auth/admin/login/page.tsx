@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import styles from "../../auth.module.css";
+import Link from "next/link";
+import styles from "./admin.module.css";
 import { loginAdmin } from "@/lib/auth/auth";
 import { AxiosError } from "axios";
 
@@ -40,57 +41,55 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <>
-      {/* Left: CTA Panel */}
-      <div className={styles.ctaPanel}>
-        <h1>System Control Panel</h1>
-        <p>
-          This area is reserved for system administrators.
-          All actions are logged and monitored.
-        </p>
-        <p style={{ opacity: 0.85, fontSize: "13px", marginTop: "20px" }}>
-          Unauthorized access is prohibited.
-        </p>
-      </div>
+    <main className={styles.adminPage}>
+      <div className={styles.adminCard}>
+       
 
-      {/* Right: Admin Login Form */}
-      <div className={styles.formPanel}>
-        <div className={styles.formLogo}>
-          <h2>HealthMate</h2>
-          <p>Admin Portal</p>
+        {/* Left: Info Panel */}
+        <div className={styles.infoPanel}>
+          <h1>System Control Panel</h1>
+          <p>This area is reserved for system administrators.</p>
+          <p>All actions are logged and monitored.</p>
+          <p className={styles.warning}>Unauthorized access is prohibited.</p>
         </div>
-        
-        <h1>Admin Login</h1>
-        <p style={{ color: "#666", fontSize: "14px", marginBottom: "20px" }}>
-          Restricted access. Authorized personnel only.
-        </p>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {/* Right: Login Form */}
+        <div className={styles.loginPanel}>
+          <div className={styles.adminLogo}>
+            <h2>HealthMate</h2>
+            <p>Admin Portal</p>
+          </div>
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Admin Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            required
-          />
+          <h1>Admin Login</h1>
+          <p>Restricted access. Authorized personnel only.</p>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            required
-          />
+          {error && <p className={styles.adminError}>{error}</p>}
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Authenticating..." : "Sign In"}
-          </button>
-        </form>
+          <form onSubmit={handleLogin}>
+            <input
+              type="email"
+              placeholder="Admin Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              required
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              required
+            />
+
+            <button type="submit" disabled={loading}>
+              {loading ? "Authenticating..." : "Sign In"}
+            </button>
+          </form>
+        </div>
       </div>
-    </>
+    </main>
   );
 }
