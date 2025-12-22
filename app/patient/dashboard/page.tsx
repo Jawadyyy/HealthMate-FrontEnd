@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, User, MessageSquare, CreditCard, Settings, LogOut, HelpCircle, Search, Edit, Plus, FileText, ChevronRight, Bell, Download, Filter, MoreVertical, Stethoscope, Clock, MapPin, Phone } from 'lucide-react';
+import { Calendar, User, CreditCard, Settings, LogOut, HelpCircle, Search, Edit, Plus, FileText, ChevronRight, Bell, Download, Filter, MoreVertical, Stethoscope, Clock, MapPin, Phone } from 'lucide-react';
 import api from '@/lib/api/api';
 import { useRouter } from 'next/navigation';
 
@@ -10,6 +10,8 @@ interface PatientData {
   name: string;
   email: string;
   role: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface PatientProfile {
@@ -23,6 +25,8 @@ interface PatientProfile {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   medicalConditions?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Appointment {
@@ -96,6 +100,15 @@ const PatientDashboard = () => {
     router.push('/auth/patient/login');
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-gray-50">
@@ -132,14 +145,13 @@ const PatientDashboard = () => {
         <nav className="px-5 space-y-2 flex-1">
           <NavItem icon={User} label="My Profile" active />
           <NavItem icon={Calendar} label="Appointments" />
-          <NavItem icon={MessageSquare} label="Messages" badge={3} />
           <NavItem icon={CreditCard} label="Payments" />
           <NavItem icon={Settings} label="Settings" />
         </nav>
 
         <div className="p-5 space-y-2 border-t border-gray-200/50">
           <NavItem icon={HelpCircle} label="Help & Support" />
-          <div onClick={handleLogout} className="w-full cursor-pointer">
+          <div onClick={handleLogout} className="w-full">
             <NavItem icon={LogOut} label="Logout" />
           </div>
         </div>
@@ -148,7 +160,7 @@ const PatientDashboard = () => {
           <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl p-4 border border-blue-200/50">
             <p className="text-sm font-medium text-blue-800">Need assistance?</p>
             <p className="text-xs text-blue-600/80 mt-1">Our support team is here to help</p>
-            <button className="mt-3 w-full bg-white text-blue-600 text-sm font-medium py-2 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all duration-200">
+            <button className="mt-3 w-full bg-white text-blue-600 text-sm font-medium py-2 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all duration-200 cursor-pointer">
               Contact Support
             </button>
           </div>
@@ -169,13 +181,13 @@ const PatientDashboard = () => {
                   className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
                 />
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200">
+              <button className="flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-200 cursor-pointer">
                 <Filter className="w-4 h-4 text-gray-600" />
                 <span className="text-sm font-medium text-gray-700">Filters</span>
               </button>
             </div>
             <div className="flex items-center space-x-5">
-              <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200">
+              <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
                 <Bell className="w-5 h-5 text-gray-600" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
@@ -201,11 +213,11 @@ const PatientDashboard = () => {
             </span>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200">
+            <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
               <Edit className="w-4 h-4" />
               <span className="text-sm font-medium">Edit profile</span>
             </button>
-            <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30">
+            <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer">
               <Plus className="w-4 h-4" />
               <span className="text-sm font-medium">New Appointment</span>
             </button>
@@ -241,7 +253,7 @@ const PatientDashboard = () => {
                     </div>
                   </div>
 
-                  <button className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30">
+                  <button className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer">
                     Book New Appointment
                   </button>
                 </div>
@@ -278,6 +290,38 @@ const PatientDashboard = () => {
                       fullWidth
                     />
 
+                    {/* Account Timeline */}
+                    <div className="md:col-span-2">
+                      <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-xl p-5">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-blue-200">
+                            <Calendar className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <h3 className="font-medium text-blue-800">Account Timeline</h3>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">Account Created</p>
+                              <p className="text-sm text-gray-500 mt-1">{formatDate(patientProfile?.updatedAt || patientData?.updatedAt)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">Profile Last Updated</p>
+                              <p className="text-sm text-gray-500 mt-1">{formatDate(patientProfile?.updatedAt || patientData?.updatedAt)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {patientProfile?.medicalConditions && patientProfile.medicalConditions.length > 0 && (
                       <div className="md:col-span-2">
                         <div className="bg-red-50/50 border border-red-100 rounded-xl p-5">
@@ -313,11 +357,11 @@ const PatientDashboard = () => {
                 <p className="text-gray-500 text-sm mt-1">Manage and track your medical appointments</p>
               </div>
               <div className="flex items-center space-x-3">
-                <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200">
+                <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
                   <Download className="w-4 h-4" />
                   <span className="text-sm font-medium">Export</span>
                 </button>
-                <button className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200">
+                <button className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
                   <MoreVertical className="w-5 h-5" />
                 </button>
               </div>
@@ -329,7 +373,7 @@ const PatientDashboard = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-4 font-medium relative transition-all duration-200 ${activeTab === tab
+                  className={`pb-4 font-medium relative transition-all duration-200 cursor-pointer ${activeTab === tab
                     ? 'text-blue-600'
                     : 'text-gray-500 hover:text-gray-700'
                     }`}
@@ -437,7 +481,7 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active = false, badge }) => (
   <div
-    className={`flex items-center justify-between px-5 py-3.5 rounded-xl cursor-pointer transition-all duration-200 ${active
+    className={`flex items-center justify-between px-5 py-3.5 rounded-xl transition-all duration-200 cursor-pointer ${active
       ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 border border-blue-200/50'
       : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900'
       }`}
@@ -521,11 +565,11 @@ const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }
         </div>
       </div>
       <div className="flex items-center space-x-3">
-        <button className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200">
+        <button className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer">
           <FileText className="w-4 h-4" />
           <span className="text-sm font-medium">View Details</span>
         </button>
-        <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200">
+        <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 cursor-pointer">
           <Clock className="w-4 h-4" />
           <span className="text-sm font-medium">Reschedule</span>
         </button>
@@ -551,7 +595,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon, title, description,
     <p className="text-gray-500 max-w-md mx-auto mb-8">{description}</p>
     <button
       onClick={onAction}
-      className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30"
+      className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer"
     >
       <span>{actionText}</span>
       <ChevronRight className="w-4 h-4" />
