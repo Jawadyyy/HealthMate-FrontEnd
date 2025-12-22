@@ -256,12 +256,11 @@ const AdminDashboard = () => {
               <span className="font-medium">Dashboard</span>
             </div>
           </div>
-          <NavItem icon={Users} label="Users" />
           <NavItem icon={Stethoscope} label="Doctors" badge={analytics.pendingApprovals} />
           <NavItem icon={UserPlus} label="Patients" />
           <NavItem icon={Calendar} label="Appointments" />
+          <NavItem icon={CreditCard} label="Medical Records" />
           <NavItem icon={CreditCard} label="Billing" />
-          <NavItem icon={Settings} label="Settings" />
         </nav>
 
         <div className="p-5 space-y-2 border-t border-gray-200/50">
@@ -303,11 +302,10 @@ const AdminDashboard = () => {
                   <button
                     key={range}
                     onClick={() => setSelectedTimeRange(range)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                      selectedTimeRange === range
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${selectedTimeRange === range
                         ? 'bg-purple-600 text-white'
                         : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     {range.charAt(0).toUpperCase() + range.slice(1)}
                   </button>
@@ -423,17 +421,17 @@ const AdminDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="date" stroke="#6b7280" />
                     <YAxis stroke="#6b7280" />
-                    <Tooltip 
-                      contentStyle={{ 
+                    <Tooltip
+                      contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Bar 
-                      dataKey="appointments" 
-                      fill="#7c3aed" 
+                    <Bar
+                      dataKey="appointments"
+                      fill="#7c3aed"
                       radius={[4, 4, 0, 0]}
                       name="Appointments"
                     />
@@ -462,8 +460,8 @@ const AdminDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="month" stroke="#6b7280" />
                     <YAxis stroke="#6b7280" />
-                    <Tooltip 
-                      contentStyle={{ 
+                    <Tooltip
+                      contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -471,18 +469,18 @@ const AdminDashboard = () => {
                       }}
                       formatter={(value) => [`$${value}`, 'Revenue']}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      fill="url(#colorRevenue)" 
-                      stroke="#10b981" 
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      fill="url(#colorRevenue)"
+                      stroke="#10b981"
                       strokeWidth={2}
                       name="Revenue"
                     />
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                   </AreaChart>
@@ -507,15 +505,15 @@ const AdminDashboard = () => {
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={true} vertical={false} />
                     <XAxis type="number" stroke="#6b7280" />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
+                    <YAxis
+                      type="category"
+                      dataKey="name"
                       stroke="#6b7280"
                       width={100}
                       tick={{ fontSize: 12 }}
                     />
-                    <Tooltip 
-                      contentStyle={{ 
+                    <Tooltip
+                      contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -528,15 +526,15 @@ const AdminDashboard = () => {
                       }}
                     />
                     <Legend />
-                    <Bar 
-                      dataKey="appointments" 
-                      fill="#3b82f6" 
+                    <Bar
+                      dataKey="appointments"
+                      fill="#3b82f6"
                       radius={[0, 4, 4, 0]}
                       name="Appointments"
                     />
-                    <Bar 
-                      dataKey="revenue" 
-                      fill="#8b5cf6" 
+                    <Bar
+                      dataKey="revenue"
+                      fill="#8b5cf6"
                       radius={[0, 4, 4, 0]}
                       name="Revenue ($)"
                     />
@@ -568,8 +566,8 @@ const AdminDashboard = () => {
                       nameKey="disease"
                     >
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
+                    <Tooltip
+                      contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -597,8 +595,8 @@ const AdminDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="month" stroke="#6b7280" />
                     <YAxis stroke="#6b7280" />
-                    <Tooltip 
-                      contentStyle={{ 
+                    <Tooltip
+                      contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
@@ -607,10 +605,10 @@ const AdminDashboard = () => {
                       formatter={(value) => [value, 'Patients']}
                     />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="patients" 
-                      stroke="#f59e0b" 
+                    <Line
+                      type="monotone"
+                      dataKey="patients"
+                      stroke="#f59e0b"
                       strokeWidth={3}
                       dot={{ r: 4 }}
                       activeDot={{ r: 6 }}
@@ -720,9 +718,8 @@ const AdminDashboard = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                              disease.trend === 'up' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                            }`}>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${disease.trend === 'up' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                              }`}>
                               {disease.trend === 'up' ? 'High Priority' : 'Under Control'}
                             </span>
                           </td>

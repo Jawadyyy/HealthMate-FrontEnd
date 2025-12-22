@@ -143,10 +143,18 @@ const PatientDashboard = () => {
         </div>
 
         <nav className="px-5 space-y-2 flex-1">
-          <NavItem icon={User} label="My Profile" active />
-          <NavItem icon={Calendar} label="Appointments" />
-          <NavItem icon={CreditCard} label="Payments" />
-          <NavItem icon={Settings} label="Settings" />
+          <div onClick={() => router.push('/patient/dashboard')}>
+            <NavItem icon={User} label="My Profile" active />
+          </div>
+          <div onClick={() => router.push('/patient/appointments')}>
+            <NavItem icon={Calendar} label="Appointments" />
+          </div>
+          <div onClick={() => router.push('/patient/payments')}>
+            <NavItem icon={CreditCard} label="Payments" />
+          </div>
+          <div onClick={() => router.push('/patient/med-records')}>
+            <NavItem icon={Settings} label="Medical Records" />
+          </div>
         </nav>
 
         <div className="p-5 space-y-2 border-t border-gray-200/50">

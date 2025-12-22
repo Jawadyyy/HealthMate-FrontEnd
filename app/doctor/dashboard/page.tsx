@@ -201,7 +201,7 @@ const DoctorDashboard = () => {
           <NavItem icon={Calendar} label="Schedule" />
           <NavItem icon={Users} label="Patients" badge={12} />
           <NavItem icon={CreditCard} label="Earnings" />
-          <NavItem icon={Settings} label="Settings" />
+          <NavItem icon={CreditCard} label="Medical Records" />
         </nav>
 
         <div className="p-5 space-y-2 border-t border-gray-200/50">
@@ -340,7 +340,7 @@ const DoctorDashboard = () => {
                         Verified
                       </span>
                     </div>
-                    
+
                     {/* Account Information */}
                     <div className="mt-6 space-y-2 text-sm">
                       <div className="flex justify-between">
