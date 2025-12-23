@@ -5,7 +5,7 @@ import {
   Calendar, Clock, User, Search, Filter, Download, MoreVertical, 
   Eye, Edit, Trash2, CheckCircle, XCircle, AlertCircle, ChevronRight,
   Plus, FileText, Phone, MapPin, Mail, Stethoscope, TrendingUp,
-  Shield, LogOut, HelpCircle, Settings, Users, UserPlus, CreditCard,
+  Shield, LogOut, HelpCircle, Settings, UserWs, UserPlus, CreditCard,
   BarChart3, Bell, ArrowUpDown, RefreshCw
 } from 'lucide-react';
 import api from '@/lib/api/api';

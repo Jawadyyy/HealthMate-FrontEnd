@@ -10,9 +10,12 @@ import {
   TrendingUp, TrendingDown, Star, Award, Clock,
   MapPin, GraduationCap, BriefcaseMedical, Heart,
   Users, CreditCard, Settings, LogOut, HelpCircle,
-  BarChart3, Activity, Bell
+  BarChart3, Activity, Bell, X, Globe, DollarSign,
+  FileText, User as UserIcon, AlertCircle, Building, CalendarDays,
+  Target, Percent, BarChart2, Activity as ActivityIcon,
+  Award as AwardIcon, ThumbsUp, MessageSquare, Download as DownloadIcon,
+  Share2, Printer, BookOpen, Shield as ShieldIcon, BadgeCheck
 } from 'lucide-react';
-import api from '@/lib/api/api';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -68,7 +71,7 @@ const Header = ({
     const value = e.target.value;
     setLocalSearchQuery(value);
     if (onSearchChange) {
-      onSearchChange(value);
+      onChange(value);
     }
   };
 
@@ -161,6 +164,10 @@ const DoctorsModule = () => {
     onLeave: 0,
     totalRevenue: 0
   });
+
+  // Modal state
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const router = useRouter();
 
@@ -436,7 +443,7 @@ const DoctorsModule = () => {
   const handleStatusUpdate = async (doctorId: string, newStatus: Doctor['status']) => {
     try {
       // In real app, this would be your API endpoint
-      await api.put(`/doctors/${doctorId}/status`, { status: newStatus });
+      // await api.put(`/doctors/${doctorId}/status`, { status: newStatus });
       
       setDoctors(doctors.map(doctor => 
         doctor._id === doctorId ? { ...doctor, status: newStatus } : doctor
@@ -452,7 +459,7 @@ const DoctorsModule = () => {
     if (confirm('Are you sure you want to delete this doctor?')) {
       try {
         // In real app, this would be your API endpoint
-        await api.delete(`/doctors/${doctorId}`);
+        // await api.delete(`/doctors/${doctorId}`);
         
         setDoctors(doctors.filter(doctor => doctor._id !== doctorId));
         alert('Doctor deleted successfully');
@@ -485,6 +492,396 @@ const DoctorsModule = () => {
     const colors = ['bg-purple-100 text-purple-700', 'bg-blue-100 text-blue-700', 'bg-green-100 text-green-700', 'bg-orange-100 text-orange-700', 'bg-red-100 text-red-700'];
     const index = specialization.charCodeAt(0) % colors.length;
     return colors[index];
+  };
+
+  // Modal functions
+  const openDoctorModal = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    setIsModalOpen(true);
+  };
+
+  const closeDoctorModal = () => {
+    setSelectedDoctor(null);
+    setIsModalOpen(false);
+  };
+
+  // Modal Component
+  const DoctorDetailModal = () => {
+    if (!selectedDoctor) return null;
+
+    const {
+      name,
+      email,
+      phone,
+      specialization,
+      department,
+      qualification,
+      experience,
+      licenseNumber,
+      status,
+      availability,
+      rating,
+      totalAppointments,
+      consultationFee,
+      revenue,
+      joinedDate,
+      nextAvailable,
+      location
+    } = selectedDoctor;
+
+    const performanceMetrics = [
+      { label: 'Patient Satisfaction', value: '96%', color: 'text-green-600', icon: ThumbsUp },
+      { label: 'On-time Rate', value: '94%', color: 'text-blue-600', icon: Clock },
+      { label: 'Success Rate', value: '98%', color: 'text-purple-600', icon: Target },
+      { label: 'Follow-up Rate', value: '92%', color: 'text-orange-600', icon: MessageSquare }
+    ];
+
+    const recentActivities = [
+      { id: 1, action: 'Completed surgery', patient: 'John Doe', time: '2 hours ago' },
+      { id: 2, action: 'Updated patient records', patient: 'Jane Smith', time: '4 hours ago' },
+      { id: 3, action: 'Consultation', patient: 'Robert Johnson', time: '6 hours ago' },
+      { id: 4, action: 'Emergency call', patient: 'Emergency Dept', time: 'Yesterday' }
+    ];
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300"
+          onClick={closeDoctorModal}
+        />
+        
+        {/* Modal Container */}
+        <div className="relative w-full max-w-6xl mx-auto max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl transition-all duration-300">
+          {/* Modal Header */}
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                  {name.charAt(0)}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{name}</h2>
+                  <div className="flex items-center space-x-3 mt-2">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
+                      {status === 'active' && <CheckCircle className="w-4 h-4 mr-1" />}
+                      {status === 'on_leave' && <Clock className="w-4 h-4 mr-1" />}
+                      {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+                    </span>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getAvailabilityColor(availability)}`}>
+                      {availability === 'available' && <CheckCircle className="w-4 h-4 mr-1" />}
+                      {availability === 'busy' && <Clock className="w-4 h-4 mr-1" />}
+                      {availability.charAt(0).toUpperCase() + availability.slice(1)}
+                    </span>
+                    <div className="flex items-center text-yellow-600">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span className="ml-1 font-medium">{rating}/5.0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={closeDoctorModal}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Basic Info */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Personal Information Card */}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <UserIcon className="w-5 h-5 mr-2" />
+                    Personal Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <Mail className="w-4 h-4" />
+                        <span>Email</span>
+                      </div>
+                      <p className="mt-1 text-gray-900 font-medium">{email}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <Phone className="w-4 h-4" />
+                        <span>Phone</span>
+                      </div>
+                      <p className="mt-1 text-gray-900 font-medium">{phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span>Location</span>
+                      </div>
+                      <p className="mt-1 text-gray-900 font-medium">{location || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        <span>Joined Date</span>
+                      </div>
+                      <p className="mt-1 text-gray-900 font-medium">{new Date(joinedDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <BadgeCheck className="w-4 h-4" />
+                        <span>License</span>
+                      </div>
+                      <p className="mt-1 text-gray-900 font-medium">{licenseNumber}</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <DollarSign className="w-4 h-4" />
+                        <span>Consultation Fee</span>
+                      </div>
+                      <p className="mt-1 text-gray-900 font-medium">${consultationFee}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Professional Details Card */}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <BriefcaseMedical className="w-5 h-5 mr-2" />
+                    Professional Details
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Specialization</label>
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getSpecializationColor(specialization)}`}>
+                            {specialization}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Department</label>
+                        <p className="mt-1 text-gray-900 font-medium">{department || 'Not assigned'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Qualification</label>
+                        <p className="mt-1 text-gray-900 font-medium">{qualification}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Experience</label>
+                        <p className="mt-1 text-gray-900 font-medium">{experience} years</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance Metrics */}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <ActivityIcon className="w-5 h-5 mr-2" />
+                    Performance Metrics
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {performanceMetrics.map((metric, index) => {
+                      const Icon = metric.icon;
+                      return (
+                        <div key={index} className="bg-white rounded-lg p-4 text-center">
+                          <div className={`${metric.color} mb-2`}>
+                            <Icon className="w-6 h-6 mx-auto" />
+                          </div>
+                          <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                          <div className="text-sm text-gray-600 mt-1">{metric.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Stats & Actions */}
+              <div className="space-y-6">
+                {/* Stats Overview */}
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistics Overview</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
+                          <CalendarDays className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm text-gray-600">Total Appointments</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{totalAppointments.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
+                          <DollarSign className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm text-gray-600">Total Revenue</span>
+                      </div>
+                      <span className="font-bold text-gray-900">${revenue?.toLocaleString() || '0'}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center">
+                          <Star className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm text-gray-600">Average Rating</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{rating}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm text-gray-600">Next Available</span>
+                      </div>
+                      <span className="font-bold text-gray-900">{nextAvailable || 'Not scheduled'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                  <div className="space-y-3">
+                    {recentActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-all duration-200">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                          <p className="text-xs text-gray-500 mt-1">{activity.patient}</p>
+                        </div>
+                        <span className="text-xs text-gray-400 flex-shrink-0">{activity.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                  <div className="space-y-2">
+                    <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <MessageSquare className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">Send Message</span>
+                    </button>
+                    <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">Schedule Appointment</span>
+                    </button>
+                    <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">View Reports</span>
+                    </button>
+                    <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <Edit className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">Edit Profile</span>
+                    </button>
+                    <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <Share2 className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">Share Profile</span>
+                    </button>
+                    <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <Printer className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-700">Print Details</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents & Certificates Section */}
+            <div className="mt-6 bg-gray-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Documents & Certifications
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Medical License</p>
+                      <p className="text-xs text-gray-500">PDF • 2.4 MB</p>
+                    </div>
+                  </div>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg">
+                    <DownloadIcon className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Board Certification</p>
+                      <p className="text-xs text-gray-500">PDF • 1.8 MB</p>
+                    </div>
+                  </div>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg">
+                    <DownloadIcon className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Malpractice Insurance</p>
+                      <p className="text-xs text-gray-500">PDF • 3.2 MB</p>
+                    </div>
+                  </div>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg">
+                    <DownloadIcon className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="border-t border-gray-200 px-6 py-4 bg-gray-50/50 rounded-b-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <ShieldIcon className="w-4 h-4" />
+                <span>Last updated: {new Date().toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={closeDoctorModal}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    // Handle contact action
+                    alert(`Contacting ${name}...`);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200"
+                >
+                  Contact Doctor
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Pagination
@@ -836,7 +1233,7 @@ const DoctorsModule = () => {
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-2">
                             <button 
-                              onClick={() => {/* View doctor details */}}
+                              onClick={() => openDoctorModal(doctor)}
                               className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-600 hover:text-purple-600"
                               title="View Details"
                             >
@@ -996,6 +1393,9 @@ const DoctorsModule = () => {
           </div>
         </div>
       </div>
+
+      {/* Render Modal */}
+      {isModalOpen && <DoctorDetailModal />}
     </div>
   );
 };
