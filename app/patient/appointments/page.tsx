@@ -7,17 +7,19 @@ import { useRouter } from 'next/navigation';
 
 interface Appointment {
     _id: string;
-    date: string;
-    time: string;
-    type: 'consultation' | 'follow-up' | 'checkup' | 'emergency';
-    status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
-    doctor: {
-        name: string;
-        specialization: string;
-    };
-    location?: string;
+    doctorId: string;
+    patientId: string;
+    appointmentDate: string;
+    status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
     notes?: string;
     createdAt: string;
+    updatedAt: string;
+    doctor?: {
+        _id: string;
+        fullName?: string;
+        name?: string;
+        specialization?: string;
+    };
 }
 
 const AppointmentsPage = () => {
@@ -40,8 +42,17 @@ const AppointmentsPage = () => {
         try {
             setLoading(true);
             const response = await api.get('/appointments/my');
+
             const data = response.data.data || response.data || [];
-            setAppointments(data);
+
+            // The doctorId is already populated with doctor info, just rename it
+            const appointmentsWithDoctors = data.map((appointment: any) => ({
+                ...appointment,
+                doctor: appointment.doctorId, // doctorId is already the doctor object!
+                doctorId: appointment.doctorId._id // Keep the actual ID
+            }));
+
+            setAppointments(appointmentsWithDoctors);
         } catch (error) {
             console.error('Error fetching appointments:', error);
             setAppointments([]);
@@ -52,14 +63,21 @@ const AppointmentsPage = () => {
 
     const filterAppointments = () => {
         let filtered = [...appointments];
+        const now = new Date();
 
         // Apply status filter
         switch (activeFilter) {
             case 'upcoming':
-                filtered = filtered.filter(apt => apt.status === 'scheduled');
+                filtered = filtered.filter(apt => {
+                    const appointmentDate = new Date(apt.appointmentDate);
+                    return (apt.status === 'scheduled' || apt.status === 'pending') && appointmentDate >= now;
+                });
                 break;
             case 'past':
-                filtered = filtered.filter(apt => apt.status === 'completed');
+                filtered = filtered.filter(apt => {
+                    const appointmentDate = new Date(apt.appointmentDate);
+                    return apt.status === 'completed' || appointmentDate < now;
+                });
                 break;
             case 'cancelled':
                 filtered = filtered.filter(apt => apt.status === 'cancelled');
@@ -70,50 +88,70 @@ const AppointmentsPage = () => {
 
         // Apply search filter
         if (searchTerm) {
-            filtered = filtered.filter(apt =>
-                apt.doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            filtered = filtered.filter(apt => {
+                const doctorName = apt.doctor?.fullName || apt.doctor?.name || '';
+                const doctorSpec = apt.doctor?.specialization || '';
+                return doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    doctorSpec.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    apt.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+            });
         }
 
+        console.log("HealthMate Debug: Filtered appointments:", filtered);
         setFilteredAppointments(filtered);
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+    const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return {
+            date: date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            }),
+            time: date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+        };
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'scheduled': return 'bg-blue-100 text-blue-700';
-            case 'completed': return 'bg-green-100 text-green-700';
-            case 'cancelled': return 'bg-red-100 text-red-700';
-            case 'rescheduled': return 'bg-yellow-100 text-yellow-700';
-            default: return 'bg-gray-100 text-gray-700';
-        }
-    };
-
-    const getTypeIcon = (type: string) => {
-        switch (type) {
-            case 'consultation': return <User className="w-4 h-4" />;
-            case 'follow-up': return <Clock className="w-4 h-4" />;
-            case 'emergency': return <Video className="w-4 h-4" />;
-            default: return <Calendar className="w-4 h-4" />;
+            case 'scheduled':
+            case 'pending':
+                return 'bg-blue-100 text-blue-700';
+            case 'completed':
+                return 'bg-green-100 text-green-700';
+            case 'cancelled':
+                return 'bg-red-100 text-red-700';
+            default:
+                return 'bg-gray-100 text-gray-700';
         }
     };
 
     const handleBookAppointment = () => {
-        router.push('/patient/appointments/book');
+        router.push('/app/patient/appointments/book');
     };
 
     const handleViewDetails = (id: string) => {
-        router.push(`/patient/appointments/${id}`);
+        router.push(`/app/patient/appointments/${id}`);
+    };
+
+    const handleCancelAppointment = async (id: string) => {
+        if (!confirm('Are you sure you want to cancel this appointment?')) {
+            return;
+        }
+
+        try {
+            await api.patch(`/appointments/cancel/${id}`);
+            alert('Appointment cancelled successfully');
+            fetchAppointments(); // Refresh the list
+        } catch (error: any) {
+            console.error('Error cancelling appointment:', error);
+            alert(error.response?.data?.message || 'Failed to cancel appointment');
+        }
     };
 
     if (loading) {
@@ -155,7 +193,7 @@ const AppointmentsPage = () => {
                             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
-                                placeholder="Search by doctor name, specialization, or type..."
+                                placeholder="Search by doctor name, specialization, or notes..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
@@ -184,91 +222,91 @@ const AppointmentsPage = () => {
                 {/* Appointments Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
                     {filteredAppointments.length > 0 ? (
-                        filteredAppointments.map((appointment) => (
-                            <div
-                                key={appointment._id}
-                                className="bg-white rounded-2xl shadow-lg shadow-blue-500/5 border border-gray-200/50 overflow-hidden hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300"
-                            >
-                                <div className="p-6">
-                                    {/* Header */}
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center space-x-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(appointment.status).split(' ')[0]}`}>
-                                                {getTypeIcon(appointment.type)}
+                        filteredAppointments.map((appointment) => {
+                            const dateTime = formatDateTime(appointment.appointmentDate);
+                            return (
+                                <div
+                                    key={appointment._id}
+                                    className="bg-white rounded-2xl shadow-lg shadow-blue-500/5 border border-gray-200/50 overflow-hidden hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300"
+                                >
+                                    <div className="p-6">
+                                        {/* Header */}
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center space-x-3">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(appointment.status).split(' ')[0]}`}>
+                                                    <Calendar className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-900">Appointment</h3>
+                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
+                                                        {appointment.status}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="font-bold text-gray-900">{appointment.type.replace('-', ' ')}</h3>
-                                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                                                    {appointment.status}
-                                                </span>
-                                            </div>
+                                            <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                                                <MoreVertical className="w-5 h-5" />
+                                            </button>
                                         </div>
-                                        <button className="text-gray-400 hover:text-gray-600 cursor-pointer">
-                                            <MoreVertical className="w-5 h-5" />
-                                        </button>
-                                    </div>
 
-                                    {/* Doctor Info */}
-                                    <div className="mb-6">
-                                        <div className="flex items-center space-x-3 mb-3">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
-                                                <User className="w-6 h-6 text-blue-600" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-gray-900">{appointment.doctor.name}</h4>
-                                                <p className="text-sm text-gray-500">{appointment.doctor.specialization}</p>
+                                        {/* Doctor Info */}
+                                        <div className="mb-6">
+                                            <div className="flex items-center space-x-3 mb-3">
+                                                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+                                                    <User className="w-6 h-6 text-blue-600" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-gray-900">
+                                                        {appointment.doctor?.fullName || appointment.doctor?.name || 'Doctor'}
+                                                    </h4>
+                                                    <p className="text-sm text-gray-500">
+                                                        {appointment.doctor?.specialization || 'Specialist'}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Details */}
-                                    <div className="space-y-3 mb-6">
-                                        <div className="flex items-center text-gray-600">
-                                            <Calendar className="w-4 h-4 mr-3" />
-                                            <span className="text-sm">{formatDate(appointment.date)}</span>
-                                        </div>
-                                        <div className="flex items-center text-gray-600">
-                                            <Clock className="w-4 h-4 mr-3" />
-                                            <span className="text-sm">{appointment.time}</span>
-                                        </div>
-                                        {appointment.location && (
+                                        {/* Details */}
+                                        <div className="space-y-3 mb-6">
                                             <div className="flex items-center text-gray-600">
-                                                <MapPin className="w-4 h-4 mr-3" />
-                                                <span className="text-sm">{appointment.location}</span>
+                                                <Calendar className="w-4 h-4 mr-3" />
+                                                <span className="text-sm">{dateTime.date}</span>
+                                            </div>
+                                            <div className="flex items-center text-gray-600">
+                                                <Clock className="w-4 h-4 mr-3" />
+                                                <span className="text-sm">{dateTime.time}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Notes */}
+                                        {appointment.notes && (
+                                            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                                <p className="text-xs text-gray-500 mb-1">Notes:</p>
+                                                <p className="text-sm text-gray-600">{appointment.notes}</p>
                                             </div>
                                         )}
-                                    </div>
 
-                                    {/* Notes */}
-                                    {appointment.notes && (
-                                        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                                            <p className="text-sm text-gray-600">{appointment.notes}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Actions */}
-                                    <div className="flex items-center justify-between">
-                                        <button
-                                            onClick={() => handleViewDetails(appointment._id)}
-                                            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium text-sm cursor-pointer"
-                                        >
-                                            <span>View Details</span>
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
-                                        {appointment.status === 'scheduled' && (
-                                            <div className="flex items-center space-x-2">
-                                                <button className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors cursor-pointer">
-                                                    Join Now
-                                                </button>
-                                                <button className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors cursor-pointer">
+                                        {/* Actions */}
+                                        <div className="flex items-center justify-between">
+                                            <button
+                                                onClick={() => handleViewDetails(appointment._id)}
+                                                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium text-sm cursor-pointer"
+                                            >
+                                                <span>View Details</span>
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                            {(appointment.status === 'scheduled' || appointment.status === 'pending') && (
+                                                <button
+                                                    onClick={() => handleCancelAppointment(appointment._id)}
+                                                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors cursor-pointer"
+                                                >
                                                     Cancel
                                                 </button>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="col-span-3 text-center py-16">
                             <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -311,7 +349,11 @@ const AppointmentsPage = () => {
                             <div>
                                 <p className="text-sm text-gray-500">Upcoming</p>
                                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                                    {appointments.filter(a => a.status === 'scheduled').length}
+                                    {appointments.filter(a => {
+                                        const appointmentDate = new Date(a.appointmentDate);
+                                        const now = new Date();
+                                        return (a.status === 'scheduled' || a.status === 'pending') && appointmentDate >= now;
+                                    }).length}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">

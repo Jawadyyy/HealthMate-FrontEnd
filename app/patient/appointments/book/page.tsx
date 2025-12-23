@@ -1,19 +1,29 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Calendar, Clock, User, MapPin, ChevronLeft, ChevronRight, Search, Filter, Video, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, User, MapPin, ChevronLeft, ChevronRight, Search, Filter, Video, Phone, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api/api';
 
 interface Doctor {
     _id: string;
-    name: string;
+    userId?: string;
+    name?: string;
+    fullName?: string;
+    email?: string;
     specialization: string;
-    experience: number;
-    rating: number;
+    degrees?: string;
+    phone?: string;
+    hospitalName?: string;
+    experienceYears?: number;
+    experience?: number;
+    rating?: number;
     availableSlots: string[];
-    consultationFee: number;
-    isOnline: boolean;
+    consultationFee?: number;
+    isOnline?: boolean;
     image?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 const BookAppointmentPage = () => {
@@ -24,30 +34,65 @@ const BookAppointmentPage = () => {
     const [appointmentType, setAppointmentType] = useState<'in-person' | 'video' | 'phone'>('in-person');
     const [notes, setNotes] = useState('');
     const [step, setStep] = useState<'doctor' | 'datetime' | 'details'>('doctor');
+    const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [bookingLoading, setBookingLoading] = useState(false);
 
-    // Mock data - replace with API call
-    const doctors: Doctor[] = [
-        {
-            _id: '1',
-            name: 'Dr. Smith Johnson',
-            specialization: 'Cardiologist',
-            experience: 12,
-            rating: 4.8,
-            availableSlots: ['09:00', '10:00', '14:00', '15:00'],
-            consultationFee: 150,
-            isOnline: true
-        },
-        {
-            _id: '2',
-            name: 'Dr. Emma Wilson',
-            specialization: 'Neurologist',
-            experience: 8,
-            rating: 4.9,
-            availableSlots: ['11:00', '13:00', '16:00'],
-            consultationFee: 200,
-            isOnline: true
-        }
-    ];
+    // Fetch doctors from API
+    useEffect(() => {
+        const fetchDoctors = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await api.get('/doctors/all');
+                console.log("HealthMate Debug: Doctors API response:", response.data);
+
+                // Handle different response structures
+                const doctorsData = response.data.data || response.data || [];
+
+                // Normalize the data to ensure consistent structure
+                const normalizedDoctors = doctorsData.map((doc: any) => ({
+                    _id: doc._id,
+                    name: doc.fullName || doc.name || 'Unknown Doctor',
+                    fullName: doc.fullName || doc.name,
+                    specialization: doc.specialization || 'General Physician',
+                    experience: doc.experienceYears || doc.experience || 0,
+                    experienceYears: doc.experienceYears || doc.experience || 0,
+                    rating: doc.rating || 4.5,
+                    availableSlots: doc.availableSlots || [],
+                    consultationFee: doc.consultationFee || 100,
+                    isOnline: doc.isOnline ?? true,
+                    image: doc.image,
+                    phone: doc.phone,
+                    hospitalName: doc.hospitalName,
+                    degrees: doc.degrees
+                }));
+
+                console.log("HealthMate Debug: Normalized doctors:", normalizedDoctors);
+                setDoctors(normalizedDoctors);
+            } catch (err: any) {
+                console.error('Error fetching doctors:', err);
+                setError(err.response?.data?.message || 'Failed to load doctors. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDoctors();
+    }, []);
+
+    // Filter doctors based on search term
+    const filteredDoctors = doctors.filter(doctor => {
+        const doctorName = doctor.fullName || doctor.name || '';
+        const doctorSpec = doctor.specialization || '';
+        return (
+            doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doctorSpec.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    });
 
     const dates = Array.from({ length: 7 }, (_, i) => {
         const date = new Date();
@@ -55,10 +100,20 @@ const BookAppointmentPage = () => {
         return date;
     });
 
-    const timeSlots = [
-        '08:00', '09:00', '10:00', '11:00',
-        '13:00', '14:00', '15:00', '16:00', '17:00'
-    ];
+    // Get time slots from selected doctor's available slots
+    const getTimeSlots = () => {
+        const doctor = doctors.find(d => d._id === selectedDoctor);
+        if (doctor && doctor.availableSlots && doctor.availableSlots.length > 0) {
+            return doctor.availableSlots;
+        }
+        // Fallback to default slots if doctor has no slots defined
+        return [
+            '08:00', '09:00', '10:00', '11:00',
+            '13:00', '14:00', '15:00', '16:00', '17:00'
+        ];
+    };
+
+    const timeSlots = getTimeSlots();
 
     const handleSelectDoctor = (doctorId: string) => {
         setSelectedDoctor(doctorId);
@@ -73,22 +128,64 @@ const BookAppointmentPage = () => {
 
     const handleBookAppointment = async () => {
         try {
-            // Call your API to book appointment
+            setBookingLoading(true);
+
+            // Parse time format (handle both "09:00" and "09:00 AM" formats)
+            let hours = 0;
+            let minutes = 0;
+
+            if (selectedTime.includes('AM') || selectedTime.includes('PM')) {
+                // Parse 12-hour format like "09:00 AM"
+                const timeMatch = selectedTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                if (timeMatch) {
+                    hours = parseInt(timeMatch[1]);
+                    minutes = parseInt(timeMatch[2]);
+                    const period = timeMatch[3].toUpperCase();
+
+                    if (period === 'PM' && hours !== 12) hours += 12;
+                    if (period === 'AM' && hours === 12) hours = 0;
+                }
+            } else {
+                // Parse 24-hour format like "09:00" or "14:00"
+                const timeMatch = selectedTime.match(/(\d+):(\d+)/);
+                if (timeMatch) {
+                    hours = parseInt(timeMatch[1]);
+                    minutes = parseInt(timeMatch[2]);
+                }
+            }
+
+            // Create date object with selected date and parsed time
+            const appointmentDateTime = new Date(selectedDate);
+            appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+            console.log("HealthMate Debug: Selected date:", selectedDate);
+            console.log("HealthMate Debug: Selected time:", selectedTime);
+            console.log("HealthMate Debug: Parsed hours:", hours, "minutes:", minutes);
+            console.log("HealthMate Debug: Final datetime:", appointmentDateTime);
+
             const appointmentData = {
                 doctorId: selectedDoctor,
-                date: selectedDate,
-                time: selectedTime,
-                type: appointmentType,
-                notes
+                appointmentDate: appointmentDateTime.toISOString(),
+                notes: notes || undefined
             };
 
-            // await api.post('/appointments/book', appointmentData);
-            console.log('Booking appointment:', appointmentData);
+            console.log("HealthMate Debug: Booking appointment:", appointmentData);
+
+            const response = await api.post('/appointments/book', appointmentData);
+
+            console.log("HealthMate Debug: Appointment booked successfully:", response.data);
+
+            // Show success message
+            alert('Appointment booked successfully!');
 
             // Redirect to appointments page
             router.push('/app/patient/appointments');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error booking appointment:', error);
+            const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to book appointment. Please try again.';
+            alert(errorMessage);
+        } finally {
+            setBookingLoading(false);
         }
     };
 
@@ -150,43 +247,79 @@ const BookAppointmentPage = () => {
                                             <input
                                                 type="text"
                                                 placeholder="Search doctors..."
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
                                                 className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-6">
-                                        {doctors.map((doctor) => (
-                                            <div
-                                                key={doctor._id}
-                                                className={`border rounded-xl p-6 cursor-pointer transition-all duration-200 ${selectedDoctor === doctor._id ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'}`}
-                                                onClick={() => handleSelectDoctor(doctor._id)}
+                                    {/* Loading State */}
+                                    {loading && (
+                                        <div className="flex items-center justify-center py-12">
+                                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                                            <span className="ml-3 text-gray-600">Loading doctors...</span>
+                                        </div>
+                                    )}
+
+                                    {/* Error State */}
+                                    {error && (
+                                        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                                            <p className="text-red-600 mb-4">{error}</p>
+                                            <button
+                                                onClick={() => window.location.reload()}
+                                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cursor-pointer"
                                             >
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex items-start space-x-4">
-                                                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
-                                                            <User className="w-8 h-8 text-blue-600" />
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-bold text-gray-900 text-lg">{doctor.name}</h3>
-                                                            <p className="text-gray-600 mt-1">{doctor.specialization}</p>
-                                                            <div className="flex items-center space-x-4 mt-3">
-                                                                <span className="text-sm text-gray-500">{doctor.experience} years experience</span>
-                                                                <span className="text-sm text-yellow-600">⭐ {doctor.rating}</span>
-                                                                {doctor.isOnline && (
-                                                                    <span className="text-sm text-green-600 font-medium">● Online Now</span>
-                                                                )}
+                                                Retry
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Doctors List */}
+                                    {!loading && !error && (
+                                        <div className="space-y-6">
+                                            {filteredDoctors.length === 0 ? (
+                                                <div className="text-center py-12">
+                                                    <p className="text-gray-500">No doctors found matching your search.</p>
+                                                </div>
+                                            ) : (
+                                                filteredDoctors.map((doctor) => (
+                                                    <div
+                                                        key={doctor._id}
+                                                        className={`border rounded-xl p-6 cursor-pointer transition-all duration-200 ${selectedDoctor === doctor._id ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'}`}
+                                                        onClick={() => handleSelectDoctor(doctor._id)}
+                                                    >
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex items-start space-x-4">
+                                                                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center overflow-hidden">
+                                                                    {doctor.image ? (
+                                                                        <img src={doctor.image} alt={doctor.name} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <User className="w-8 h-8 text-blue-600" />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <h3 className="font-bold text-gray-900 text-lg">{doctor.fullName || doctor.name || 'Doctor'}</h3>
+                                                                    <p className="text-gray-600 mt-1">{doctor.specialization || 'General Physician'}</p>
+                                                                    <div className="flex items-center space-x-4 mt-3">
+                                                                        <span className="text-sm text-gray-500">{doctor.experienceYears || doctor.experience || 0} years experience</span>
+                                                                        <span className="text-sm text-yellow-600">⭐ {doctor.rating || 4.5}</span>
+                                                                        {doctor.isOnline && (
+                                                                            <span className="text-sm text-green-600 font-medium">● Online Now</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="font-bold text-gray-900">${doctor.consultationFee || 100}</p>
+                                                                <p className="text-sm text-gray-500">Consultation Fee</p>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-gray-900">${doctor.consultationFee}</p>
-                                                        <p className="text-sm text-gray-500">Consultation Fee</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="bg-white rounded-2xl shadow-lg shadow-blue-500/5 border border-gray-200/50 p-6">
@@ -271,24 +404,35 @@ const BookAppointmentPage = () => {
                                 </div>
 
                                 <div>
-                                    <h3 className="font-medium text-gray-900 mb-4">Available Time Slots</h3>
-                                    <div className="grid grid-cols-4 gap-3">
-                                        {timeSlots.map((time) => {
-                                            const isSelected = selectedTime === time;
-                                            return (
-                                                <button
-                                                    key={time}
-                                                    onClick={() => setSelectedTime(time)}
-                                                    className={`p-4 rounded-xl text-center transition-all duration-200 ${isSelected
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
-                                                        }`}
-                                                >
-                                                    {time}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    <h3 className="font-medium text-gray-900 mb-4">
+                                        Available Time Slots
+                                        <span className="text-sm text-gray-500 ml-2">({timeSlots.length} slots available)</span>
+                                    </h3>
+                                    {timeSlots.length === 0 ? (
+                                        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                                            <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                                            <p className="text-gray-500 font-medium">No available time slots</p>
+                                            <p className="text-sm text-gray-400 mt-1">Please select a different date or doctor</p>
+                                        </div>
+                                    ) : (
+                                        <div className={`grid gap-3 ${timeSlots.length <= 4 ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                                            {timeSlots.map((time) => {
+                                                const isSelected = selectedTime === time;
+                                                return (
+                                                    <button
+                                                        key={time}
+                                                        onClick={() => setSelectedTime(time)}
+                                                        className={`p-4 rounded-xl text-center font-medium transition-all duration-200 ${isSelected
+                                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                                                            : 'bg-gray-50 hover:bg-blue-50 hover:border-blue-200 text-gray-900 border border-gray-200'
+                                                            }`}
+                                                    >
+                                                        {time}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="mt-8 pt-8 border-t border-gray-200">
@@ -359,9 +503,17 @@ const BookAppointmentPage = () => {
                                 <div className="mt-8 pt-8 border-t border-gray-200">
                                     <button
                                         onClick={handleBookAppointment}
-                                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 cursor-pointer"
+                                        disabled={bookingLoading}
+                                        className={`w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center ${bookingLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                     >
-                                        Confirm & Book Appointment
+                                        {bookingLoading ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                Booking...
+                                            </>
+                                        ) : (
+                                            'Confirm & Book Appointment'
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -384,10 +536,10 @@ const BookAppointmentPage = () => {
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-gray-900">
-                                                        {doctors.find(d => d._id === selectedDoctor)?.name}
+                                                        {doctors.find(d => d._id === selectedDoctor)?.fullName || doctors.find(d => d._id === selectedDoctor)?.name || 'Doctor'}
                                                     </p>
                                                     <p className="text-sm text-gray-500">
-                                                        {doctors.find(d => d._id === selectedDoctor)?.specialization}
+                                                        {doctors.find(d => d._id === selectedDoctor)?.specialization || 'General Physician'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -433,7 +585,7 @@ const BookAppointmentPage = () => {
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-gray-600">Consultation Fee</span>
                                             <span className="font-bold text-gray-900">
-                                                ${selectedDoctor ? doctors.find(d => d._id === selectedDoctor)?.consultationFee : '0'}
+                                                ${selectedDoctor ? (doctors.find(d => d._id === selectedDoctor)?.consultationFee || 100) : '0'}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">

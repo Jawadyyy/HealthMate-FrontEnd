@@ -30,12 +30,20 @@ interface PatientProfile {
 }
 
 interface Appointment {
-  id: string;
-  date: string;
-  time: string;
-  type: string;
-  doctorName: string;
-  nurseName?: string;
+  _id: string;
+  doctorId: string;
+  patientId: string;
+  appointmentDate: string;
+  status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  doctor?: {
+    _id: string;
+    fullName?: string;
+    name?: string;
+    specialization?: string;
+  };
 }
 
 const PatientDashboard = () => {
@@ -86,9 +94,18 @@ const PatientDashboard = () => {
   const fetchAppointments = async () => {
     try {
       const response = await api.get('/appointments/my');
-      setAppointments(response.data.data || response.data || []);
+      let appointmentsData = response.data.data || response.data || [];
+
+      // The doctorId is already populated with doctor info, just rename it
+      const appointmentsWithDoctors = appointmentsData.map((appointment: any) => ({
+        ...appointment,
+        doctor: appointment.doctorId, // doctorId is already the doctor object!
+        doctorId: appointment.doctorId._id // Keep the actual ID
+      }));
+
+      setAppointments(appointmentsWithDoctors);
     } catch (e) {
-      console.log("Appointments endpoint not ready, using empty");
+      console.error("Appointments endpoint error:", e);
       setAppointments([]);
     }
   };
@@ -99,6 +116,37 @@ const PatientDashboard = () => {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+  };
+
+  const getUpcomingAppointments = () => {
+    const now = new Date();
+    return appointments.filter(apt => {
+      const appointmentDate = new Date(apt.appointmentDate);
+      return (apt.status === 'scheduled' || apt.status === 'pending') && appointmentDate >= now;
+    });
+  };
+
+  const getPastAppointments = () => {
+    const now = new Date();
+    return appointments.filter(apt => {
+      const appointmentDate = new Date(apt.appointmentDate);
+      return apt.status === 'completed' || appointmentDate < now;
     });
   };
 
@@ -116,6 +164,9 @@ const PatientDashboard = () => {
       </div>
     );
   }
+
+  const upcomingAppointments = getUpcomingAppointments();
+  const pastAppointments = getPastAppointments();
 
   return (
     <>
@@ -167,7 +218,7 @@ const PatientDashboard = () => {
                 </div>
 
                 <button
-                  onClick={() => router.push('/patient/appointments/book')}
+                  onClick={() => router.push('/app/patient/appointments/book')}
                   className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer"
                 >
                   Book New Appointment
@@ -273,12 +324,12 @@ const PatientDashboard = () => {
               <p className="text-gray-500 text-sm mt-1">Manage and track your medical appointments</p>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
-                <Download className="w-4 h-4" />
-                <span className="text-sm font-medium">Export</span>
-              </button>
-              <button className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
-                <MoreVertical className="w-5 h-5" />
+              <button
+                onClick={() => router.push('/app/patient/appointments')}
+                className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer"
+              >
+                <span className="text-sm font-medium">View All</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -294,8 +345,8 @@ const PatientDashboard = () => {
                   : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
-                {tab === 'upcoming' && 'Upcoming Appointments'}
-                {tab === 'past' && 'Past Appointments'}
+                {tab === 'upcoming' && `Upcoming (${upcomingAppointments.length})`}
+                {tab === 'past' && `Past (${pastAppointments.length})`}
                 {tab === 'records' && 'Medical Records'}
                 {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"></div>
@@ -308,9 +359,9 @@ const PatientDashboard = () => {
           <div className="p-8">
             {activeTab === 'upcoming' && (
               <div className="space-y-4">
-                {appointments.length > 0 ? (
-                  appointments.map((appointment) => (
-                    <AppointmentCard key={appointment.id} appointment={appointment} />
+                {upcomingAppointments.length > 0 ? (
+                  upcomingAppointments.map((appointment) => (
+                    <AppointmentCard key={appointment._id} appointment={appointment} formatDateTime={formatDateTime} />
                   ))
                 ) : (
                   <EmptyState
@@ -318,19 +369,27 @@ const PatientDashboard = () => {
                     title="No upcoming appointments"
                     description="You don't have any scheduled appointments at the moment"
                     actionText="Book New Appointment"
-                    onAction={() => router.push('/patient/appointments/book')}
+                    onAction={() => router.push('/app/patient/appointments/book')}
                   />
                 )}
               </div>
             )}
             {activeTab === 'past' && (
-              <EmptyState
-                icon={Clock}
-                title="No past appointments"
-                description="Your past appointments will appear here"
-                actionText="View History"
-                onAction={() => { }}
-              />
+              <div className="space-y-4">
+                {pastAppointments.length > 0 ? (
+                  pastAppointments.map((appointment) => (
+                    <AppointmentCard key={appointment._id} appointment={appointment} formatDateTime={formatDateTime} isPast />
+                  ))
+                ) : (
+                  <EmptyState
+                    icon={Clock}
+                    title="No past appointments"
+                    description="Your past appointments will appear here"
+                    actionText="View History"
+                    onAction={() => { }}
+                  />
+                )}
+              </div>
             )}
             {activeTab === 'records' && (
               <EmptyState
@@ -352,7 +411,7 @@ const PatientDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-800">Total Appointments</p>
-                <p className="text-3xl font-bold text-blue-900 mt-2">0</p>
+                <p className="text-3xl font-bold text-blue-900 mt-2">{appointments.length}</p>
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <Calendar className="w-6 h-6 text-blue-600" />
@@ -362,19 +421,19 @@ const PatientDashboard = () => {
           <div className="bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200/50 rounded-2xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-800">Prescriptions</p>
-                <p className="text-3xl font-bold text-green-900 mt-2">0</p>
+                <p className="text-sm font-medium text-green-800">Upcoming</p>
+                <p className="text-3xl font-bold text-green-900 mt-2">{upcomingAppointments.length}</p>
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <FileText className="w-6 h-6 text-green-600" />
+                <Clock className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
           <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-2xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-800">Upcoming Tests</p>
-                <p className="text-3xl font-bold text-purple-900 mt-2">0</p>
+                <p className="text-sm font-medium text-purple-800">Completed</p>
+                <p className="text-3xl font-bold text-purple-900 mt-2">{appointments.filter(a => a.status === 'completed').length}</p>
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <Stethoscope className="w-6 h-6 text-purple-600" />
@@ -413,59 +472,85 @@ const InfoCard: React.FC<InfoCardProps> = ({ icon: Icon, label, items, fullWidth
   </div>
 );
 
-const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }) => (
-  <div className="group border border-gray-200/50 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 bg-white">
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div className="flex items-start space-x-6">
-        <div className="text-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 min-w-[80px]">
-          <p className="text-2xl font-bold text-blue-900">{appointment.date ? new Date(appointment.date).getDate() : 'N/A'}</p>
-          <p className="text-xs font-medium text-blue-700 mt-1">
-            {appointment.date ? new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' }) : 'N/A'}
-          </p>
-          <p className="text-sm text-gray-500 mt-2">{appointment.time || 'N/A'}</p>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Appointment Type</p>
-            <p className="text-lg font-semibold text-gray-900 mt-1">{appointment.type || 'N/A'}</p>
+interface AppointmentCardProps {
+  appointment: Appointment;
+  formatDateTime: (dateString: string) => { date: string; time: string };
+  isPast?: boolean;
+}
+
+const AppointmentCard: React.FC<AppointmentCardProps> = ({ appointment, formatDateTime, isPast = false }) => {
+  const dateTime = formatDateTime(appointment.appointmentDate);
+  const appointmentDate = new Date(appointment.appointmentDate);
+
+  return (
+    <div className="group border border-gray-200/50 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 bg-white">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start space-x-6">
+          <div className={`text-center bg-gradient-to-br ${isPast ? 'from-gray-50 to-gray-100' : 'from-blue-50 to-blue-100'} rounded-xl p-4 min-w-[80px]`}>
+            <p className={`text-2xl font-bold ${isPast ? 'text-gray-700' : 'text-blue-900'}`}>
+              {appointmentDate.getDate()}
+            </p>
+            <p className={`text-xs font-medium mt-1 ${isPast ? 'text-gray-600' : 'text-blue-700'}`}>
+              {appointmentDate.toLocaleDateString('en-US', { month: 'short' })}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">{dateTime.time}</p>
           </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <User className="w-4 h-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Doctor</p>
-                <p className="font-medium">{appointment.doctorName || 'N/A'}</p>
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Appointment</p>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${appointment.status === 'scheduled' || appointment.status === 'pending'
+                  ? 'bg-blue-100 text-blue-700'
+                  : appointment.status === 'completed'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                  }`}>
+                  {appointment.status}
+                </span>
               </div>
             </div>
-            {appointment.nurseName && (
+            <div className="flex flex-wrap gap-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <User className="w-4 h-4 text-green-600" />
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <User className="w-4 h-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Nurse</p>
-                  <p className="font-medium">{appointment.nurseName}</p>
+                  <p className="text-xs text-gray-500">Doctor</p>
+                  <p className="font-medium">
+                    {appointment.doctor?.fullName || appointment.doctor?.name || 'Doctor'}
+                  </p>
                 </div>
+              </div>
+              {appointment.doctor?.specialization && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Stethoscope className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Specialization</p>
+                    <p className="font-medium">{appointment.doctor.specialization}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            {appointment.notes && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Notes:</p>
+                <p className="text-sm text-gray-700">{appointment.notes}</p>
               </div>
             )}
           </div>
         </div>
-      </div>
-      <div className="flex items-center space-x-3">
-        <button className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer">
-          <FileText className="w-4 h-4" />
-          <span className="text-sm font-medium">View Details</span>
-        </button>
-        <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 cursor-pointer">
-          <Clock className="w-4 h-4" />
-          <span className="text-sm font-medium">Reschedule</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer">
+            <FileText className="w-4 h-4" />
+            <span className="text-sm font-medium">View Details</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface EmptyStateProps {
   icon: React.ElementType;

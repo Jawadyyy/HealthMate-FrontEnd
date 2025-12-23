@@ -1,189 +1,138 @@
 /* admin.module.css */
 
 /* =====================================================
-   PAGE CONTAINER (15% smaller)
+   THEME VARIABLES
+===================================================== */
+:root {
+  --primary: #7c3aed;
+  --primary-dark: #5b21b6;
+}
+
+/* =====================================================
+   PAGE CONTAINER
 ===================================================== */
 .adminPage {
-  min-height: 85vh;
+  min-height: 90vh;
+  /* 10% smaller */
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #f5f7fb 0%, #e4e7f4 100%);
-  padding: 1.7rem;
-  position: relative;
-}
-
-/* Subtle background pattern */
-.adminPage::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.05) 0%, transparent 17%),
-    radial-gradient(circle at 85% 30%, rgba(91, 33, 182, 0.05) 0%, transparent 17%);
-  pointer-events: none;
+  background: #f5f7fb;
+  padding: 18px;
+  /* 10% smaller */
 }
 
 /* =====================================================
-   CARD CONTAINER (15% smaller)
+   CARD CONTAINER
 ===================================================== */
 .adminCard {
   width: 100%;
-  max-width: 765px;
-  min-height: 425px;
+  max-width: 810px;
+  /* 10% smaller */
+  min-height: 450px;
+  /* 10% smaller */
   background: white;
-  border-radius: 0.85rem;
-  box-shadow: 0 17px 21.25px -4.25px rgba(0, 0, 0, 0.085), 0 8.5px 8.5px -4.25px rgba(0, 0, 0, 0.034);
+  border-radius: 9px;
+  /* 10% smaller */
+  box-shadow: 0 9px 36px rgba(0, 0, 0, 0.09);
+  /* 10% smaller */
   position: relative;
   overflow: hidden;
   display: flex;
-  backdrop-filter: blur(8.5px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 /* =====================================================
-   HOME BUTTON (15% smaller)
+   HOME BUTTON
 ===================================================== */
 .homeButton {
   position: absolute;
-  top: 1.275rem;
-  right: 1.275rem;
+  top: 18px;
+  /* 10% smaller */
+  right: 18px;
+  /* 10% smaller */
   z-index: 100;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.425rem;
-  padding: 0.531rem 1.063rem;
-  border-radius: 42.5px;
+  gap: 7.2px;
+  /* 10% smaller */
+  padding: 7.2px 14.4px;
+  /* 10% smaller */
+  border-radius: 18px;
+  /* 10% smaller */
   background: white;
-  color: #6b7280;
-  font-size: 0.744rem;
+  color: #666;
+  font-size: 12.6px;
+  /* 10% smaller */
   font-weight: 500;
   text-decoration: none;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 3.4px 5.1px -0.85px rgba(0, 0, 0, 0.085), 0 1.7px 3.4px -0.85px rgba(0, 0, 0, 0.051);
-  transition: all 0.17s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(6.8px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 0.9px solid #e0e0e0;
+  /* 10% smaller */
+  box-shadow: 0 1.8px 7.2px rgba(0, 0, 0, 0.072);
+  /* 10% smaller */
+  transition: all 0.2s;
 }
 
 .homeButton:hover {
   background: #f8f9fa;
-  transform: translateY(-1.7px);
-  box-shadow: 0 8.5px 12.75px -2.55px rgba(0, 0, 0, 0.085), 0 3.4px 5.1px -1.7px rgba(0, 0, 0, 0.043);
-  color: #7c3aed;
-  border-color: #8b5cf6;
-}
-
-.homeButton:active {
-  transform: translateY(0);
+  transform: translateY(-0.9px);
+  /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(0, 0, 0, 0.09);
+  /* 10% smaller */
 }
 
 /* =====================================================
-   LEFT: INFO PANEL (15% smaller)
+   LEFT: INFO PANEL (Purple)
 ===================================================== */
 .infoPanel {
   width: 50%;
-  padding: 2.55rem 2.125rem;
-  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  padding: 72px 54px;
+  /* 10% smaller */
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Subtle pattern overlay */
-.infoPanel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 42.5%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 42.5%);
-  pointer-events: none;
 }
 
 .infoPanel h1 {
-  font-size: 1.488rem;
-  font-weight: 700;
-  margin-bottom: 1.275rem;
+  font-size: 25.2px;
+  /* 10% smaller */
+  font-weight: 600;
+  margin-bottom: 18px;
+  /* 10% smaller */
   line-height: 1.3;
-  position: relative;
-  z-index: 1;
-  letter-spacing: -0.021em;
 }
 
 .infoPanel p {
-  font-size: 0.808rem;
+  font-size: 14.4px;
+  /* 10% smaller */
   line-height: 1.6;
-  margin-bottom: 0.85rem;
+  margin-bottom: 13.5px;
+  /* 10% smaller */
   opacity: 0.9;
-  max-width: 255px;
-  position: relative;
-  z-index: 1;
+  max-width: 288px;
+  /* 10% smaller */
 }
 
 .infoPanel .warning {
-  font-size: 0.68rem;
-  margin-top: 1.7rem;
+  font-size: 11.7px;
+  /* 10% smaller */
+  margin-top: 27px;
+  /* 10% smaller */
   opacity: 0.8;
   font-style: italic;
-  padding: 0.638rem 0.85rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 0.425rem;
-  border-left: 2.55px solid rgba(255, 255, 255, 0.3);
-}
-
-/* Security Info Styles (15% smaller) */
-.securityInfo {
-  margin-top: 1.7rem;
-  padding: 0.85rem;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 0.425rem;
-  font-size: 0.723rem;
-  text-align: center;
-  backdrop-filter: blur(4.25px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  width: 100%;
-  max-width: 255px;
-}
-
-.attemptWarning {
-  color: #fbbf24;
-  margin-top: 0.425rem;
-  font-weight: 600;
-  font-size: 0.68rem;
-}
-
-.lockedMessage {
-  color: #fca5a5;
-  font-weight: 600;
-  margin-bottom: 0.425rem;
-  font-size: 0.765rem;
-}
-
-.lockedSubtext {
-  font-size: 0.638rem;
-  opacity: 0.9;
-  line-height: 1.4;
 }
 
 /* =====================================================
-   RIGHT: LOGIN FORM (15% smaller)
+   RIGHT: LOGIN FORM
 ===================================================== */
 .loginPanel {
   width: 50%;
-  padding: 2.55rem 2.125rem;
+  padding: 72px 54px;
+  /* 10% smaller */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -192,349 +141,168 @@
 
 .adminLogo {
   text-align: center;
-  margin-bottom: 2.125rem;
+  margin-bottom: 36px;
+  /* 10% smaller */
 }
 
 .adminLogo h2 {
   color: #7c3aed;
-  font-size: 1.488rem;
-  font-weight: 800;
-  margin-bottom: 0.213rem;
-  letter-spacing: -0.021em;
-  background: linear-gradient(to right, #7c3aed, #5b21b6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 21.6px;
+  /* 10% smaller */
+  font-weight: 700;
+  margin-bottom: 4.5px;
+  /* 10% smaller */
 }
 
 .adminLogo p {
-  color: #6b7280;
-  font-size: 0.723rem;
-  letter-spacing: 0.043em;
-  text-transform: uppercase;
+  color: #666;
+  font-size: 12.6px;
+  /* 10% smaller */
 }
 
 .loginPanel h1 {
-  font-size: 1.275rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 0.425rem;
-  letter-spacing: -0.021em;
+  font-size: 21.6px;
+  /* 10% smaller */
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 9px;
+  /* 10% smaller */
 }
 
-.loginPanel > p {
-  color: #6b7280;
-  font-size: 0.765rem;
-  margin-bottom: 1.7rem;
-  line-height: 1.5;
+.loginPanel>p {
+  color: #666;
+  font-size: 12.6px;
+  /* 10% smaller */
+  margin-bottom: 27px;
+  /* 10% smaller */
 }
 
-/* =====================================================
-   FORM STYLES (15% smaller)
-===================================================== */
-.loginPanel form {
-  width: 100%;
-}
-
-.formGroup {
-  margin-bottom: 1.063rem;
-  position: relative;
-}
-
+/* Form Inputs */
 .loginPanel input {
   width: 100%;
-  padding: 0.744rem 0.85rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.425rem;
-  font-size: 0.808rem;
-  background: #f3f4f6;
-  transition: all 0.17s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
+  padding: 10.8px 12.6px;
+  /* 10% smaller */
+  margin-bottom: 14.4px;
+  /* 10% smaller */
+  border: 0.9px solid #ddd;
+  /* 10% smaller */
+  border-radius: 5.4px;
+  /* 10% smaller */
+  font-size: 12.6px;
+  /* 10% smaller */
+  background: #f9f9f9;
+  transition: all 0.2s;
 }
 
 .loginPanel input:focus {
   outline: none;
   border-color: #7c3aed;
   background: white;
-  box-shadow: 0 0 0 2.55px rgba(124, 58, 237, 0.128);
+  box-shadow: 0 0 0 2.7px rgba(124, 58, 237, 0.09);
+  /* 10% smaller */
 }
 
-.loginPanel input:disabled {
-  background: #f9fafb;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Error States (15% smaller) */
-.inputError {
-  border-color: #dc2626 !important;
-  background-color: #fef2f2 !important;
-}
-
-.inputError:focus {
-  box-shadow: 0 0 0 2.55px rgba(220, 38, 38, 0.128) !important;
-}
-
-.fieldError {
-  color: #dc2626;
-  font-size: 0.68rem;
-  margin-top: 0.319rem;
-  display: block;
-  text-align: left;
-  font-weight: 500;
-}
-
-/* =====================================================
-   BUTTON STYLES (15% smaller)
-===================================================== */
-.submitButton {
+/* Login Button */
+.loginPanel button[type="submit"] {
   width: 100%;
-  padding: 0.744rem;
-  background: linear-gradient(to right, #7c3aed, #5b21b6);
+  padding: 10.8px;
+  /* 10% smaller */
+  background: #7c3aed;
   color: white;
   border: none;
-  border-radius: 0.425rem;
-  font-size: 0.808rem;
+  border-radius: 5.4px;
+  /* 10% smaller */
+  font-size: 12.6px;
+  /* 10% smaller */
   font-weight: 600;
   cursor: pointer;
-  margin-top: 0.425rem;
-  transition: all 0.17s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  margin-top: 9px;
+  /* 10% smaller */
+  transition: all 0.2s;
 }
 
-.submitButton:hover:not(:disabled) {
-  transform: translateY(-1.7px);
-  box-shadow: 0 8.5px 12.75px -2.55px rgba(0, 0, 0, 0.085), 0 3.4px 5.1px -1.7px rgba(0, 0, 0, 0.043);
-  background: linear-gradient(to right, #5b21b6, #4c1d95);
+.loginPanel button[type="submit"]:hover {
+  background: #5b21b6;
+  transform: translateY(-0.9px);
+  /* 10% smaller */
+  box-shadow: 0 3.6px 10.8px rgba(124, 58, 237, 0.27);
+  /* 10% smaller */
 }
 
-.submitButton:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.submitButton:disabled {
-  opacity: 0.6;
+.loginPanel button[type="submit"]:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
-  background: #9ca3af;
 }
 
-/* Loading Button (15% smaller) */
-.loadingButton {
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-.spinner {
-  display: inline-block;
-  width: 13.6px;
-  height: 13.6px;
-  border: 1.7px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 0.68s linear infinite;
-  margin-right: 0.425rem;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* =====================================================
-   ERROR MESSAGES (15% smaller)
-===================================================== */
+/* Error Message */
 .adminError {
   color: #dc2626;
   background: #fef2f2;
-  padding: 0.744rem 0.85rem;
-  border-radius: 0.425rem;
-  font-size: 0.765rem;
-  margin-bottom: 1.063rem;
-  border-left: 3.4px solid #dc2626;
-  animation: slideIn 0.255s ease-out;
-}
-
-.adminError p {
-  margin: 0;
-  font-weight: 500;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8.5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  padding: 9px 10.8px;
+  /* 10% smaller */
+  border-radius: 5.4px;
+  /* 10% smaller */
+  font-size: 12.6px;
+  /* 10% smaller */
+  margin-bottom: 14.4px;
+  /* 10% smaller */
+  border-left: 3.6px solid #dc2626;
+  /* 10% smaller */
 }
 
 /* =====================================================
-   SECURITY NOTICE (15% smaller)
+   RESPONSIVE DESIGN
 ===================================================== */
-.securityNotice {
-  margin-top: 1.275rem;
-  padding: 0.744rem;
-  background-color: #f0f9ff;
-  border-radius: 0.425rem;
-  border-left: 3.4px solid #0ea5e9;
-  font-size: 0.723rem;
-  color: #0369a1;
-  animation: fadeIn 0.425s ease-out;
-}
-
-.securityNotice p {
-  margin: 0;
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* =====================================================
-   RESPONSIVE DESIGN (15% smaller)
-===================================================== */
-
-/* Tablet */
-@media (max-width: 1024px) {
-  .adminCard {
-    max-width: 80.75%;
-  }
-  
-  .infoPanel,
-  .loginPanel {
-    padding: 2.125rem 1.7rem;
-  }
-}
-
-/* Mobile Landscape */
 @media (max-width: 768px) {
-  .adminPage {
-    padding: 0.85rem;
-    min-height: 85vh;
-  }
-  
   .adminCard {
     flex-direction: column;
     min-height: auto;
-    max-width: 100%;
-    margin: 0;
-    border-radius: 0.638rem;
+    max-width: 95%;
+    margin: 18px 0;
+    /* 10% smaller */
   }
-  
+
   .infoPanel,
   .loginPanel {
     width: 100%;
-    padding: 2.125rem 1.7rem !important;
+    padding: 36px 27px !important;
+    /* 10% smaller */
   }
-  
-  .infoPanel {
-    padding: 2.125rem 1.7rem !important;
-    min-height: 212.5px;
-  }
-  
+
   .homeButton {
-    top: 0.85rem;
-    right: 0.85rem;
-    padding: 0.425rem 0.85rem;
-    font-size: 0.68rem;
-    backdrop-filter: none;
-  }
-  
-  .infoPanel h1 {
-    font-size: 1.275rem;
-  }
-  
-  .loginPanel h1 {
-    font-size: 1.169rem;
+    top: 13.5px;
+    /* 10% smaller */
+    right: 13.5px;
+    /* 10% smaller */
+    padding: 5.4px 10.8px;
+    /* 10% smaller */
+    font-size: 11.7px;
+    /* 10% smaller */
   }
 }
 
-/* Mobile Portrait */
 @media (max-width: 480px) {
-  .adminPage {
-    padding: 0.638rem;
-    align-items: flex-start;
-    padding-top: 1.7rem;
-  }
-  
+
   .infoPanel,
   .loginPanel {
-    padding: 1.7rem 1.275rem !important;
+    padding: 27px 18px !important;
+    /* 10% smaller */
   }
-  
-  .infoPanel h1 {
-    font-size: 1.169rem;
-    margin-bottom: 0.85rem;
-  }
-  
-  .loginPanel h1 {
-    font-size: 1.063rem;
-  }
-  
-  .adminLogo {
-    margin-bottom: 1.7rem;
-  }
-  
-  .adminLogo h2 {
-    font-size: 1.275rem;
-  }
-  
-  .loginPanel input {
-    padding: 0.638rem 0.744rem;
-    font-size: 0.765rem;
-  }
-  
-  .submitButton {
-    padding: 0.638rem;
-    font-size: 0.765rem;
-  }
-  
-  .adminError {
-    font-size: 0.723rem;
-    padding: 0.638rem;
-  }
-  
-  .homeButton {
-    position: fixed;
-    top: 0.85rem;
-    right: 0.85rem;
-    z-index: 1000;
-  }
-}
 
-/* Print Styles (15% smaller) */
-@media print {
-  .adminPage {
-    background: white !important;
-    padding: 0 !important;
+  .infoPanel h1 {
+    font-size: 19.8px;
+    /* 10% smaller */
   }
-  
-  .adminCard {
-    box-shadow: none !important;
-    border: 1px solid #ccc !important;
-    min-height: auto !important;
-    max-width: 100% !important;
+
+  .loginPanel h1 {
+    font-size: 18px;
+    /* 10% smaller */
   }
-  
-  .homeButton,
-  .submitButton {
-    display: none !important;
-  }
-  
+
   .loginPanel input {
-    border: 1px solid #ccc !important;
-    background: white !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    padding: 9px 10.8px;
+    /* 10% smaller */
+    font-size: 11.7px;
+    /* 10% smaller */
   }
 }
