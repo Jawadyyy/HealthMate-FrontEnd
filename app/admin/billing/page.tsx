@@ -463,8 +463,8 @@ const Sidebar: React.FC<{ handleLogout: () => void }> = ({ handleLogout }) => (
 
     <nav className="px-5 space-y-2 flex-1">
       <NavItem icon={BarChart3} label="Dashboard" route="/admin/dashboard" />
-      <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
       <NavItem icon={Stethoscope} label="Doctors" route="/admin/doctors" />
+      <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
       <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
       <ActiveNavItem icon={CreditCard} label="Billing" />
     </nav>
