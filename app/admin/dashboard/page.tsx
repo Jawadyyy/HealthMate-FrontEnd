@@ -256,7 +256,6 @@ const Sidebar: React.FC<{
 
     <nav className="px-5 space-y-2 flex-1">
       <ActiveNavItem icon={BarChart3} label="Dashboard" />
-      <NavItem icon={Users} label="Users" route="/admin/users" />
       <NavItem icon={Stethoscope} label="Doctors" badge={analytics.pendingApprovals} route="/admin/doctors" />
       <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
       <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
