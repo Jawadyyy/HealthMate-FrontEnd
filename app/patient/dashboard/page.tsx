@@ -123,18 +123,16 @@ const PatientDashboard = () => {
       <div className="px-8 py-5 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <h1 className="text-2xl font-bold text-gray-900">Welcome back, {patientData?.name?.split(' ')[0] || 'Patient'}!</h1>
-          <span className="text-xs font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full">
-            {patientProfile?.bloodGroup || 'Blood Group'} Positive
-          </span>
+          {patientProfile?.bloodGroup && (
+            <span className="text-xs font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full">
+              {patientProfile.bloodGroup}
+            </span>
+          )}
         </div>
         <div className="flex items-center space-x-3">
           <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
             <Edit className="w-4 h-4" />
             <span className="text-sm font-medium">Edit profile</span>
-          </button>
-          <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer">
-            <Plus className="w-4 h-4" />
-            <span className="text-sm font-medium">New Appointment</span>
           </button>
         </div>
       </div>
@@ -168,7 +166,10 @@ const PatientDashboard = () => {
                   </div>
                 </div>
 
-                <button className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer">
+                <button
+                  onClick={() => router.push('/patient/appointments/book')}
+                  className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer"
+                >
                   Book New Appointment
                 </button>
               </div>
@@ -221,7 +222,7 @@ const PatientDashboard = () => {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">Account Created</p>
-                            <p className="text-sm text-gray-500 mt-1">{formatDate(patientProfile?.updatedAt || patientData?.updatedAt)}</p>
+                            <p className="text-sm text-gray-500 mt-1">{formatDate(patientProfile?.createdAt || patientData?.createdAt)}</p>
                           </div>
                         </div>
                         <div className="flex items-start space-x-3">
@@ -264,7 +265,7 @@ const PatientDashboard = () => {
       </div>
 
       {/* Appointments Section */}
-      <div className="px-8 pb-8">
+      <div className="px-8 pb-6">
         <div className="bg-white rounded-2xl shadow-lg shadow-blue-500/5 border border-gray-200/50 overflow-hidden">
           <div className="border-b border-gray-200/50 px-8 py-6 flex items-center justify-between">
             <div>
@@ -317,7 +318,7 @@ const PatientDashboard = () => {
                     title="No upcoming appointments"
                     description="You don't have any scheduled appointments at the moment"
                     actionText="Book New Appointment"
-                    onAction={() => { }}
+                    onAction={() => router.push('/patient/appointments/book')}
                   />
                 )}
               </div>
@@ -351,7 +352,7 @@ const PatientDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-800">Total Appointments</p>
-                <p className="text-3xl font-bold text-blue-900 mt-2">12</p>
+                <p className="text-3xl font-bold text-blue-900 mt-2">0</p>
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <Calendar className="w-6 h-6 text-blue-600" />
@@ -362,7 +363,7 @@ const PatientDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-800">Prescriptions</p>
-                <p className="text-3xl font-bold text-green-900 mt-2">5</p>
+                <p className="text-3xl font-bold text-green-900 mt-2">0</p>
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <FileText className="w-6 h-6 text-green-600" />
@@ -373,7 +374,7 @@ const PatientDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-purple-800">Upcoming Tests</p>
-                <p className="text-3xl font-bold text-purple-900 mt-2">2</p>
+                <p className="text-3xl font-bold text-purple-900 mt-2">0</p>
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <Stethoscope className="w-6 h-6 text-purple-600" />
@@ -417,16 +418,16 @@ const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-start space-x-6">
         <div className="text-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 min-w-[80px]">
-          <p className="text-2xl font-bold text-blue-900">{appointment.date ? new Date(appointment.date).getDate() : '01'}</p>
+          <p className="text-2xl font-bold text-blue-900">{appointment.date ? new Date(appointment.date).getDate() : 'N/A'}</p>
           <p className="text-xs font-medium text-blue-700 mt-1">
-            {appointment.date ? new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' }) : 'Jan'}
+            {appointment.date ? new Date(appointment.date).toLocaleDateString('en-US', { month: 'short' }) : 'N/A'}
           </p>
-          <p className="text-sm text-gray-500 mt-2">{appointment.time || '09:00 AM'}</p>
+          <p className="text-sm text-gray-500 mt-2">{appointment.time || 'N/A'}</p>
         </div>
         <div className="space-y-3">
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Appointment Type</p>
-            <p className="text-lg font-semibold text-gray-900 mt-1">{appointment.type || 'General Consultation'}</p>
+            <p className="text-lg font-semibold text-gray-900 mt-1">{appointment.type || 'N/A'}</p>
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center space-x-2">
@@ -435,7 +436,7 @@ const AppointmentCard: React.FC<{ appointment: Appointment }> = ({ appointment }
               </div>
               <div>
                 <p className="text-xs text-gray-500">Doctor</p>
-                <p className="font-medium">{appointment.doctorName || 'Dr. Smith Johnson'}</p>
+                <p className="font-medium">{appointment.doctorName || 'N/A'}</p>
               </div>
             </div>
             {appointment.nurseName && (
