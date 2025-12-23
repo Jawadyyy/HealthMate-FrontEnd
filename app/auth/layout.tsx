@@ -39,41 +39,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     return (
       <main className={styles.page}>
         <div className={styles.card}>
-          {/* Just show the card with minimal content */}
           <div style={{ opacity: 0.5 }}>Loading...</div>
         </div>
       </main>
     );
   }
 
-  // If it's admin, render the admin page directly without slider
+  // If it's admin, render ONLY the admin page directly
   if (currentRole === "admin") {
-    return (
-      <main className={`${styles.page} ${styles.themeAdmin}`}>
-        <div className={styles.card}>
-          {/* Home Button */}
-          <Link href="/" className={styles.homeButton}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-            <span>Home</span>
-          </Link>
-          {/* Render admin page directly */}
-          <AdminLoginPage />
-        </div>
-      </main>
-    );
+    return <AdminLoginPage />; // Return admin page directly without any wrapper
   }
 
   // Panels for slider (patient and doctor only)
