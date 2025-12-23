@@ -260,7 +260,6 @@ const Sidebar: React.FC<{
       <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
       <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
       <NavItem icon={CreditCard} label="Billing" route="/admin/billing" />
-      <NavItem icon={Settings} label="Settings" route="/admin/settings" />
     </nav>
 
     <div className="p-5 space-y-2 border-t border-gray-200/50">

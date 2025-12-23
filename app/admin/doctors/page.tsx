@@ -533,7 +533,6 @@ const DoctorsModule = () => {
 
         <nav className="px-5 space-y-2 flex-1">
           <NavItem icon={BarChart3} label="Dashboard" route="/admin/dashboard" />
-          <NavItem icon={Users} label="Users" route="/admin/users" />
           <div className="flex items-center justify-between px-5 py-3.5 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50 cursor-pointer">
             <div className="flex items-center space-x-3.5">
               <Stethoscope className="w-5 h-5 text-purple-600" />
@@ -543,7 +542,6 @@ const DoctorsModule = () => {
           <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
           <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
           <NavItem icon={CreditCard} label="Billing" route="/admin/billing" />
-          <NavItem icon={Settings} label="Settings" route="/admin/settings" />
         </nav>
 
         <div className="p-5 space-y-2 border-t border-gray-200/50">
