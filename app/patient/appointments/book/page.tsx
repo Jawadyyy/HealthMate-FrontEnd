@@ -19,6 +19,7 @@ interface Doctor {
     experience?: number;
     rating?: number;
     availableSlots: string[];
+    availableDays?: string[];
     consultationFee?: number;
     isOnline?: boolean;
     image?: string;
@@ -48,7 +49,6 @@ const BookAppointmentPage = () => {
                 setError(null);
 
                 const response = await api.get('/doctors/all');
-                console.log("HealthMate Debug: Doctors API response:", response.data);
 
                 // Handle different response structures
                 const doctorsData = response.data.data || response.data || [];
@@ -63,7 +63,8 @@ const BookAppointmentPage = () => {
                     experienceYears: doc.experienceYears || doc.experience || 0,
                     rating: doc.rating || 4.5,
                     availableSlots: doc.availableSlots || [],
-                    consultationFee: doc.consultationFee || 100,
+                    consultationFee: doc.fee || doc.consultationFee || 0,
+                    availableDays: doc.availableDays || [],
                     isOnline: doc.isOnline ?? true,
                     image: doc.image,
                     phone: doc.phone,
@@ -71,7 +72,6 @@ const BookAppointmentPage = () => {
                     degrees: doc.degrees
                 }));
 
-                console.log("HealthMate Debug: Normalized doctors:", normalizedDoctors);
                 setDoctors(normalizedDoctors);
             } catch (err: any) {
                 console.error('Error fetching doctors:', err);
@@ -94,11 +94,33 @@ const BookAppointmentPage = () => {
         );
     });
 
-    const dates = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        return date;
-    });
+    // Get available dates from selected doctor's schedule
+    const getAvailableDates = () => {
+        const doctor = doctors.find(d => d._id === selectedDoctor);
+
+        if (!doctor || !doctor.availableDays || doctor.availableDays.length === 0) {
+            return [];
+        }
+
+        // Get next 60 days to ensure we find enough matching days
+        const next60Days = Array.from({ length: 60 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            return date;
+        });
+
+        // Filter dates that match doctor's available days
+        const availableDates = next60Days.filter(date => {
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+            const isAvailable = doctor.availableDays?.includes(dayName);
+            return isAvailable;
+        });
+
+        // Return first 7-10 available dates for better UI
+        return availableDates.slice(0, 10);
+    };
+
+    const dates = selectedDoctor ? getAvailableDates() : [];
 
     // Get time slots from selected doctor's available slots
     const getTimeSlots = () => {
@@ -158,28 +180,19 @@ const BookAppointmentPage = () => {
             const appointmentDateTime = new Date(selectedDate);
             appointmentDateTime.setHours(hours, minutes, 0, 0);
 
-            console.log("HealthMate Debug: Selected date:", selectedDate);
-            console.log("HealthMate Debug: Selected time:", selectedTime);
-            console.log("HealthMate Debug: Parsed hours:", hours, "minutes:", minutes);
-            console.log("HealthMate Debug: Final datetime:", appointmentDateTime);
-
             const appointmentData = {
                 doctorId: selectedDoctor,
                 appointmentDate: appointmentDateTime.toISOString(),
                 notes: notes || undefined
             };
 
-            console.log("HealthMate Debug: Booking appointment:", appointmentData);
-
             const response = await api.post('/appointments/book', appointmentData);
-
-            console.log("HealthMate Debug: Appointment booked successfully:", response.data);
 
             // Show success message
             alert('Appointment booked successfully!');
 
             // Redirect to appointments page
-            router.push('/app/patient/appointments');
+            router.push('/patient/appointments');
         } catch (error: any) {
             console.error('Error booking appointment:', error);
             const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to book appointment. Please try again.';
@@ -311,7 +324,9 @@ const BookAppointmentPage = () => {
                                                                 </div>
                                                             </div>
                                                             <div className="text-right">
-                                                                <p className="font-bold text-gray-900">${doctor.consultationFee || 100}</p>
+                                                                <p className="font-bold text-gray-900">
+                                                                    ${doctor.consultationFee || 0}
+                                                                </p>
                                                                 <p className="text-sm text-gray-500">Consultation Fee</p>
                                                             </div>
                                                         </div>
@@ -382,25 +397,33 @@ const BookAppointmentPage = () => {
 
                                 <div className="mb-8">
                                     <h3 className="font-medium text-gray-900 mb-4">Select Date</h3>
-                                    <div className="grid grid-cols-7 gap-2">
-                                        {dates.map((date, index) => {
-                                            const dateString = date.toISOString().split('T')[0];
-                                            const isSelected = selectedDate === dateString;
-                                            return (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => setSelectedDate(dateString)}
-                                                    className={`p-4 rounded-xl text-center transition-all duration-200 ${isSelected
-                                                        ? 'bg-blue-600 text-white'
-                                                        : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
-                                                        }`}
-                                                >
-                                                    <div className="text-sm font-medium">{formatDate(date)}</div>
-                                                    <div className="text-xs mt-1">{date.getDate()}</div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    {dates.length === 0 ? (
+                                        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                                            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                                            <p className="text-gray-500 font-medium">No available dates</p>
+                                            <p className="text-sm text-gray-400 mt-1">This doctor has no available slots at the moment</p>
+                                        </div>
+                                    ) : (
+                                        <div className={`grid gap-2 ${dates.length <= 3 ? 'grid-cols-3' : dates.length <= 5 ? 'grid-cols-5' : 'grid-cols-7'}`}>
+                                            {dates.map((date, index) => {
+                                                const dateString = date.toISOString().split('T')[0];
+                                                const isSelected = selectedDate === dateString;
+                                                return (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => setSelectedDate(dateString)}
+                                                        className={`p-4 rounded-xl text-center transition-all duration-200 ${isSelected
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
+                                                            }`}
+                                                    >
+                                                        <div className="text-sm font-medium">{formatDate(date)}</div>
+                                                        <div className="text-xs mt-1">{date.getDate()}</div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -585,16 +608,8 @@ const BookAppointmentPage = () => {
                                         <div className="flex justify-between items-center mb-4">
                                             <span className="text-gray-600">Consultation Fee</span>
                                             <span className="font-bold text-gray-900">
-                                                ${selectedDoctor ? (doctors.find(d => d._id === selectedDoctor)?.consultationFee || 100) : '0'}
+                                                ${selectedDoctor ? (doctors.find(d => d._id === selectedDoctor)?.consultationFee || 0) : '0'}
                                             </span>
-                                        </div>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-gray-600">Service Fee</span>
-                                            <span className="text-gray-900">$10.00</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-gray-600">Tax</span>
-                                            <span className="text-gray-900">$5.00</span>
                                         </div>
                                     </div>
 
@@ -602,7 +617,7 @@ const BookAppointmentPage = () => {
                                         <div className="flex justify-between items-center">
                                             <span className="text-lg font-bold text-gray-900">Total</span>
                                             <span className="text-2xl font-bold text-gray-900">
-                                                ${selectedDoctor ? (doctors.find(d => d._id === selectedDoctor)?.consultationFee || 0) + 15 : '0'}
+                                                ${selectedDoctor ? (doctors.find(d => d._id === selectedDoctor)?.consultationFee || 0) : '0'}
                                             </span>
                                         </div>
                                     </div>

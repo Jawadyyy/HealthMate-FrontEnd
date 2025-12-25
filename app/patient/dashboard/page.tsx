@@ -218,7 +218,7 @@ const PatientDashboard = () => {
                 </div>
 
                 <button
-                  onClick={() => router.push('/app/patient/appointments/book')}
+                  onClick={() => router.push('/patient/appointments/book')}
                   className="w-full mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 cursor-pointer"
                 >
                   Book New Appointment
@@ -325,7 +325,7 @@ const PatientDashboard = () => {
             </div>
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => router.push('/app/patient/appointments')}
+                onClick={() => router.push('/patient/appointments')}
                 className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer"
               >
                 <span className="text-sm font-medium">View All</span>
@@ -369,7 +369,7 @@ const PatientDashboard = () => {
                     title="No upcoming appointments"
                     description="You don't have any scheduled appointments at the moment"
                     actionText="Book New Appointment"
-                    onAction={() => router.push('/app/patient/appointments/book')}
+                    onAction={() => router.push('/patient/appointments/book')}
                   />
                 )}
               </div>
@@ -405,8 +405,9 @@ const PatientDashboard = () => {
       </div>
 
       {/* Quick Stats Footer */}
+      {/* Quick Stats Footer */}
       <div className="px-8 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-2xl p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -437,6 +438,38 @@ const PatientDashboard = () => {
               </div>
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <Stethoscope className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200/50 rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-800">Cancelled</p>
+                <p className="text-3xl font-bold text-red-900 mt-2">{appointments.filter(a => a.status === 'cancelled').length}</p>
+              </div>
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/50 rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-800">Missed</p>
+                <p className="text-3xl font-bold text-orange-900 mt-2">
+                  {appointments.filter(a => {
+                    const appointmentDate = new Date(a.appointmentDate);
+                    const now = new Date();
+                    return a.status === 'pending' && appointmentDate < now;
+                  }).length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
             </div>
           </div>

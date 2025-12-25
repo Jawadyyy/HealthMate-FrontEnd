@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, FileText, Download, Filter, Search, Plus, MapPin, ChevronRight, MoreVertical, Video, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, User, FileText, Download, Filter, Search, Plus, MapPin, ChevronRight, MoreVertical, Video, Phone, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import api from '@/lib/api/api';
 import { useRouter } from 'next/navigation';
 
@@ -10,7 +10,7 @@ interface Appointment {
     doctorId: string;
     patientId: string;
     appointmentDate: string;
-    status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
+    status: 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'missing';
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -19,6 +19,12 @@ interface Appointment {
         fullName?: string;
         name?: string;
         specialization?: string;
+        fee?: number;
+        availability?: {
+            day: string;
+            startTime: string;
+            endTime: string;
+        }[];
     };
 }
 
@@ -27,7 +33,7 @@ const AppointmentsPage = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('upcoming');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'past' | 'cancelled' | 'missed'>('upcoming');
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -45,12 +51,34 @@ const AppointmentsPage = () => {
 
             const data = response.data.data || response.data || [];
 
-            // The doctorId is already populated with doctor info, just rename it
-            const appointmentsWithDoctors = data.map((appointment: any) => ({
-                ...appointment,
-                doctor: appointment.doctorId, // doctorId is already the doctor object!
-                doctorId: appointment.doctorId._id // Keep the actual ID
-            }));
+            // Fetch detailed doctor info including fee and availability
+            const appointmentsWithDoctors = await Promise.all(
+                data.map(async (appointment: any) => {
+                    try {
+                        // Fetch doctor details with fee and availability
+                        const doctorResponse = await api.get(`/doctors/${appointment.doctorId._id}`);
+                        const doctorData = doctorResponse.data.data || doctorResponse.data;
+
+                        return {
+                            ...appointment,
+                            doctor: {
+                                ...appointment.doctorId,
+                                fee: doctorData.fee,
+                                availability: doctorData.availability
+                            },
+                            doctorId: appointment.doctorId._id
+                        };
+                    } catch (error) {
+                        console.error('Error fetching doctor details:', error);
+                        // Fallback to basic doctor info if detailed fetch fails
+                        return {
+                            ...appointment,
+                            doctor: appointment.doctorId,
+                            doctorId: appointment.doctorId._id
+                        };
+                    }
+                })
+            );
 
             setAppointments(appointmentsWithDoctors);
         } catch (error) {
@@ -81,6 +109,12 @@ const AppointmentsPage = () => {
                 break;
             case 'cancelled':
                 filtered = filtered.filter(apt => apt.status === 'cancelled');
+                break;
+            case 'missed':
+                filtered = filtered.filter(apt => {
+                    const appointmentDate = new Date(apt.appointmentDate);
+                    return apt.status === 'pending' && appointmentDate < now;
+                });
                 break;
             default:
                 break;
@@ -117,7 +151,14 @@ const AppointmentsPage = () => {
         };
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string, appointmentDate: string) => {
+        const now = new Date();
+        const aptDate = new Date(appointmentDate);
+
+        if (status === 'pending' && aptDate < now) {
+            return 'bg-orange-100 text-orange-700';
+        }
+
         switch (status) {
             case 'scheduled':
             case 'pending':
@@ -131,12 +172,31 @@ const AppointmentsPage = () => {
         }
     };
 
+    const getDisplayStatus = (status: string, appointmentDate: string) => {
+        const now = new Date();
+        const aptDate = new Date(appointmentDate);
+
+        if (status === 'pending' && aptDate < now) {
+            return 'missed';
+        }
+
+        return status;
+    };
+
+    const getMissedAppointments = () => {
+        const now = new Date();
+        return appointments.filter(apt => {
+            const appointmentDate = new Date(apt.appointmentDate);
+            return apt.status === 'pending' && appointmentDate < now;
+        });
+    };
+
     const handleBookAppointment = () => {
-        router.push('/app/patient/appointments/book');
+        router.push('/patient/appointments/book');
     };
 
     const handleViewDetails = (id: string) => {
-        router.push(`/app/patient/appointments/${id}`);
+        router.push(`/patient/appointments/${id}`);
     };
 
     const handleCancelAppointment = async (id: string) => {
@@ -167,6 +227,8 @@ const AppointmentsPage = () => {
             </div>
         );
     }
+
+    const missedAppointments = getMissedAppointments();
 
     return (
         <div className="p-8">
@@ -202,7 +264,7 @@ const AppointmentsPage = () => {
                         <div className="flex items-center space-x-2">
                             <Filter className="w-5 h-5 text-gray-500" />
                             <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl p-1">
-                                {(['all', 'upcoming', 'past', 'cancelled'] as const).map((filter) => (
+                                {(['all', 'upcoming', 'past', 'missed', 'cancelled'] as const).map((filter) => (
                                     <button
                                         key={filter}
                                         onClick={() => setActiveFilter(filter)}
@@ -224,6 +286,8 @@ const AppointmentsPage = () => {
                     {filteredAppointments.length > 0 ? (
                         filteredAppointments.map((appointment) => {
                             const dateTime = formatDateTime(appointment.appointmentDate);
+                            const displayStatus = getDisplayStatus(appointment.status, appointment.appointmentDate);
+
                             return (
                                 <div
                                     key={appointment._id}
@@ -233,13 +297,13 @@ const AppointmentsPage = () => {
                                         {/* Header */}
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex items-center space-x-3">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(appointment.status).split(' ')[0]}`}>
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(appointment.status, appointment.appointmentDate).split(' ')[0]}`}>
                                                     <Calendar className="w-5 h-5" />
                                                 </div>
                                                 <div>
                                                     <h3 className="font-bold text-gray-900">Appointment</h3>
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                                                        {appointment.status}
+                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(appointment.status, appointment.appointmentDate)}`}>
+                                                        {displayStatus}
                                                     </span>
                                                 </div>
                                             </div>
@@ -275,6 +339,11 @@ const AppointmentsPage = () => {
                                                 <Clock className="w-4 h-4 mr-3" />
                                                 <span className="text-sm">{dateTime.time}</span>
                                             </div>
+                                            {appointment.doctor?.fee && (
+                                                <div className="flex items-center text-gray-600">
+                                                    <span className="text-sm font-medium">Fee: ${appointment.doctor.fee}</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Notes */}
@@ -332,7 +401,7 @@ const AppointmentsPage = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <div className="bg-white rounded-2xl p-6 border border-gray-200/50">
                         <div className="flex items-center justify-between">
                             <div>
@@ -384,6 +453,19 @@ const AppointmentsPage = () => {
                             </div>
                             <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
                                 <XCircle className="w-6 h-6 text-red-600" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-2xl p-6 border border-orange-200/50">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-orange-500">Missed</p>
+                                <p className="text-2xl font-bold text-orange-900 mt-2">
+                                    {missedAppointments.length}
+                                </p>
+                            </div>
+                            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                                <AlertCircle className="w-6 h-6 text-orange-600" />
                             </div>
                         </div>
                     </div>
