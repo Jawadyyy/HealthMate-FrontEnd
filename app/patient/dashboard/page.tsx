@@ -181,7 +181,10 @@ const PatientDashboard = () => {
           )}
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
+          <button
+            onClick={() => router.push('/patient/profile')}
+            className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
+          >
             <Edit className="w-4 h-4" />
             <span className="text-sm font-medium">Edit profile</span>
           </button>

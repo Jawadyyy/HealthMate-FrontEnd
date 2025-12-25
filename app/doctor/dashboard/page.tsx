@@ -168,7 +168,7 @@ const DoctorDashboard = () => {
           </div>
           <button className="flex items-center space-x-2 px-4 py-2.5 text-green-600 hover:bg-green-50 rounded-xl border border-green-200 transition-all duration-200 cursor-pointer">
             <Edit className="w-4 h-4" />
-            <span className="text-sm font-medium">Edit schedule</span>
+            <span className="text-sm font-medium">Edit Profile</span>
           </button>
         </div>
 
@@ -392,8 +392,8 @@ const DoctorDashboard = () => {
                 <div key={index} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity.type === 'completed' ? 'bg-green-100' : activity.type === 'prescription' ? 'bg-blue-100' : 'bg-purple-100'}`}>
                     {activity.type === 'completed' ? <CheckCircle className="w-4 h-4 text-green-600" /> :
-                     activity.type === 'prescription' ? <FileText className="w-4 h-4 text-blue-600" /> :
-                     <Activity className="w-4 h-4 text-purple-600" />}
+                      activity.type === 'prescription' ? <FileText className="w-4 h-4 text-blue-600" /> :
+                        <Activity className="w-4 h-4 text-purple-600" />}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-gray-900">{activity.action}</p>
@@ -408,7 +408,7 @@ const DoctorDashboard = () => {
           <div className="bg-white rounded-2xl shadow-lg shadow-green-500/5 border border-gray-200/50 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-6">Quick Links</h3>
             <div className="grid grid-cols-2 gap-4">
-              <button 
+              <button
                 onClick={() => router.push('/doctor/patients')}
                 className="flex flex-col items-center p-4 bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200 rounded-xl hover:bg-green-100 transition-all duration-200 cursor-pointer"
               >
@@ -417,7 +417,7 @@ const DoctorDashboard = () => {
                 <span className="text-sm text-gray-500 mt-1">124 patients</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => router.push('/doctor/appointments')}
                 className="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all duration-200 cursor-pointer"
               >
@@ -426,7 +426,7 @@ const DoctorDashboard = () => {
                 <span className="text-sm text-gray-500 mt-1">Manage schedule</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => router.push('/doctor/prescriptions')}
                 className="flex flex-col items-center p-4 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl hover:bg-purple-100 transition-all duration-200 cursor-pointer"
               >
@@ -435,7 +435,7 @@ const DoctorDashboard = () => {
                 <span className="text-sm text-gray-500 mt-1">Write new</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => router.push('/doctor/reports')}
                 className="flex flex-col items-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100/50 border border-yellow-200 rounded-xl hover:bg-yellow-100 transition-all duration-200 cursor-pointer"
               >
