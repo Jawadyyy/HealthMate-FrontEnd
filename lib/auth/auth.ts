@@ -16,16 +16,34 @@ export const getCurrentUser = async () => {
   return await api.get('/auth/me');
 };
 
-// Signup functions
-export const registerPatient = async (name: string, email: string, password: string) => {
-  return await api.post('/auth/register/patient', { name, email, password });
+// Signup
+export const registerPatient = async (
+  name: string,
+  email: string,
+  password: string,
+) => {
+  return await api.post('/auth/register/patient', {
+    name,
+    email,
+    password,
+  });
 };
 
-export const registerDoctor = async (name: string, email: string, password: string) => {
-  return await api.post('/auth/register/doctor', { name, email, password });
+export const registerDoctor = async (
+  name: string,
+  email: string,
+  password: string,
+) => {
+  return await api.post('/auth/register/doctor', {
+    name,
+    email,
+    password,
+  });
 };
 
-// Profile creation functions
+// --------------------
+// Patient Profile
+// --------------------
 interface PatientProfileData {
   age: number;
   gender: string;
@@ -37,7 +55,9 @@ interface PatientProfileData {
   medicalConditions?: string[];
 }
 
-export const createPatientProfile = async (profileData: PatientProfileData) => {
+export const createPatientProfile = async (
+  profileData: PatientProfileData,
+) => {
   return await api.post('/patients/create', profileData);
 };
 
@@ -45,6 +65,9 @@ export const getPatientProfile = async () => {
   return await api.get('/patients/me');
 };
 
+// --------------------
+// Doctor Profile 
+// --------------------
 interface DoctorProfileData {
   fullName: string;
   specialization: string;
@@ -52,9 +75,13 @@ interface DoctorProfileData {
   phone: string;
   hospitalName: string;
   experienceYears: number;
+  fee: number;
+  availableDays: string[];
   availableSlots: string[];
 }
 
-export const createDoctorProfile = async (profileData: DoctorProfileData) => {
+export const createDoctorProfile = async (
+  profileData: DoctorProfileData,
+) => {
   return await api.post('/doctors/create', profileData);
 };

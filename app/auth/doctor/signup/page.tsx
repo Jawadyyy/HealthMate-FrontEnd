@@ -3,241 +3,141 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../../auth.module.css";
-import { registerDoctor, createDoctorProfile, loginDoctor } from "@/lib/auth/auth";
+import {
+  registerDoctor,
+  createDoctorProfile,
+  loginDoctor,
+} from "@/lib/auth/auth";
 import { AxiosError } from "axios";
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export default function DoctorSignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
 
-  // Step 1 fields
+  // Step 1
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Step 2 fields
+  // Step 2
   const [specialization, setSpecialization] = useState("");
   const [degrees, setDegrees] = useState("");
   const [phone, setPhone] = useState("");
   const [hospitalName, setHospitalName] = useState("");
   const [experienceYears, setExperienceYears] = useState("");
+  const [fee, setFee] = useState("");
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [availableSlots, setAvailableSlots] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const toggleDay = (day: string) => {
+    setAvailableDays((prev) =>
+      prev.includes(day)
+        ? prev.filter((d) => d !== day)
+        : [...prev, day],
+    );
+  };
+
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    // Move to step 2
+    if (password !== confirmPassword) return setError("Passwords do not match");
     setStep(2);
   };
 
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
 
     try {
-      // Step 1: Register doctor
-      const registerResponse = await registerDoctor(name, email, password);
+      await registerDoctor(name, email, password);
+      const loginRes = await loginDoctor(email, password);
 
-      // Step 2: Since registration doesn't return a token, log the user in
-      const loginResponse = await loginDoctor(email, password);
+      localStorage.setItem("token", loginRes.data.token);
+      localStorage.setItem("role", "doctor");
+      localStorage.setItem("isLoggedIn", "true");
 
-      if (loginResponse.data.token) {
-        // Store token immediately for auto-login
-        localStorage.setItem("token", loginResponse.data.token);
-        localStorage.setItem("role", "doctor");
-        localStorage.setItem("isLoggedIn", "true");
+      await createDoctorProfile({
+        fullName: name,
+        specialization,
+        degrees,
+        phone,
+        hospitalName,
+        experienceYears: Number(experienceYears),
+        fee: Number(fee),
+        availableDays,
+        availableSlots: availableSlots
+          .split(",")
+          .map((s) => s.trim()),
+      });
 
-        try {
-          // Step 3: Create doctor profile
-          const profileData = {
-            fullName: name,
-            specialization,
-            degrees,
-            phone,
-            hospitalName,
-            experienceYears: parseInt(experienceYears),
-            availableSlots: availableSlots
-              ? availableSlots.split(",").map((slot) => slot.trim())
-              : [],
-          };
-
-          await createDoctorProfile(profileData);
-        } catch (profileErr) {
-          console.error("Profile creation error:", profileErr);
-          // Continue to dashboard even if profile creation fails
-        }
-
-        // Redirect to doctor dashboard (user is logged in)
-        router.push("/doctor/dashboard");
-      }
+      router.push("/doctor/dashboard");
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
-      if (axiosError.response) {
-        setError(
-          axiosError.response.data?.message || "Registration failed. Please try again."
-        );
-      } else if (axiosError.request) {
-        setError("Unable to connect to server. Please try again.");
-      } else {
-        setError("An unexpected error occurred.");
-      }
+      setError(axiosError.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const goToLogin = () => {
-    router.push("/auth/doctor/login");
-  };
-
-  const goBackToStep1 = () => {
-    setStep(1);
-    setError("");
-  };
-
   return (
     <>
-      {/* Left: CTA Panel */}
       <div className={styles.ctaPanel}>
         <h1>Welcome Back!</h1>
-        <p>To access your doctor portal please login</p>
-        <button onClick={goToLogin}>SIGN IN</button>
+        <button onClick={() => router.push("/auth/doctor/login")}>
+          SIGN IN
+        </button>
       </div>
 
-      {/* Right: Signup Form */}
       <div className={`${styles.formPanel} ${styles.signupForm}`}>
-        <div className={styles.formLogo}></div>
-
         <h1>Doctor Registration</h1>
-        <p className={styles.stepIndicator}>Step {step} of 2</p>
+        <p>Step {step} of 2</p>
 
         {error && <p className={styles.error}>{error}</p>}
 
         {step === 1 ? (
           <form onSubmit={handleStep1Submit}>
-            <input
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <button type="submit" disabled={loading}>
-              Next
-            </button>
+            <input placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <button>Next</button>
           </form>
         ) : (
           <form onSubmit={handleStep2Submit}>
-            <input
-              placeholder="Specialization (e.g., Cardiology)"
-              value={specialization}
-              onChange={(e) => setSpecialization(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <input placeholder="Specialization" value={specialization} onChange={(e) => setSpecialization(e.target.value)} />
+            <input placeholder="Degrees" value={degrees} onChange={(e) => setDegrees(e.target.value)} />
+            <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input placeholder="Hospital Name" value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} />
+            <input type="number" placeholder="Experience Years" value={experienceYears} onChange={(e) => setExperienceYears(e.target.value)} />
+            <input type="number" placeholder="Consultation Fee (PKR)" value={fee} onChange={(e) => setFee(e.target.value)} />
 
-            <input
-              placeholder="Degrees (e.g., MBBS, FCPS)"
-              value={degrees}
-              onChange={(e) => setDegrees(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <input
-              type="tel"
-              placeholder="Phone Number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <input
-              placeholder="Hospital Name"
-              value={hospitalName}
-              onChange={(e) => setHospitalName(e.target.value)}
-              required
-              disabled={loading}
-            />
-
-            <input
-              type="number"
-              placeholder="Years of Experience"
-              value={experienceYears}
-              onChange={(e) => setExperienceYears(e.target.value)}
-              required
-              disabled={loading}
-              min="0"
-              max="60"
-            />
+            {/* Available Days */}
+            <div className={styles.days}>
+              {DAYS.map((day) => (
+                <label key={day}>
+                  <input
+                    type="checkbox"
+                    checked={availableDays.includes(day)}
+                    onChange={() => toggleDay(day)}
+                  />
+                  {day}
+                </label>
+              ))}
+            </div>
 
             <textarea
-              placeholder="Available Slots (comma-separated, e.g., 09:00 - 11:00, 14:00 - 17:00)"
+              placeholder="Available Slots (comma-separated)"
               value={availableSlots}
               onChange={(e) => setAvailableSlots(e.target.value)}
-              required
-              disabled={loading}
-              className={styles.textarea}
             />
 
-            <div className={styles.buttonGroup}>
-              <button
-                type="button"
-                onClick={goBackToStep1}
-                disabled={loading}
-                className={styles.backButton}
-              >
-                Back
-              </button>
-              <button type="submit" disabled={loading}>
-                {loading ? "Registering..." : "Register"}
-              </button>
-            </div>
+            <button type="submit">Register</button>
           </form>
         )}
       </div>
