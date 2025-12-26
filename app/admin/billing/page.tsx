@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api/api';
 import { useRouter } from 'next/navigation';
+import { Header } from '../components/Header';
+import { Sidebar } from '../components/Sidebar';
 
 // ========== TYPES ==========
 interface Invoice {
@@ -221,6 +223,14 @@ const BillingModule = () => {
     amountRange: 'all'
   });
 
+  // Mock admin data
+  const adminData = {
+    _id: '1',
+    name: 'Alex Morgan',
+    email: 'alex@healthmate.com',
+    role: 'admin'
+  };
+
   useEffect(() => {
     loadBillingData();
   }, []);
@@ -338,80 +348,201 @@ const BillingModule = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
-      <Sidebar handleLogout={handleLogout} />
-
-      <div className="flex-1 overflow-auto ml-72">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-purple-50/30">
+      <Sidebar pendingApprovals={3} activeRoute="/admin/billing" />
+      
+      <div className="ml-72">
         <Header 
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
+          adminData={adminData}
+          showTimeRange={false}
+          searchPlaceholder="Search invoices, patients, or invoice numbers..."
         />
-
-        {/* Breadcrumb & Actions */}
-        <div className="px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-gray-900">Billing & Payments</h1>
-            <span className="text-xs font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
-              {formatCurrency(stats.totalRevenue)}
-            </span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button 
-              onClick={() => router.push('/admin/billing/new')}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-500/30 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm font-medium">Create Invoice</span>
-            </button>
-            <ActionButton icon={Download} label="Export" />
-            <ActionButton icon={RefreshCw} label="Refresh" onClick={loadBillingData} />
-            <ActionButton icon={Printer} label="Print" />
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <StatsGrid stats={stats} />
-
-        {/* Filters Panel */}
-        {showFilters && (
-          <FiltersPanel
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onClearFilters={() => setFilters({ 
-              status: 'all', 
-              type: 'all', 
-              dateRange: 'all', 
-              amountRange: 'all' 
-            })}
-          />
-        )}
-
-        {/* Tabs */}
-        <div className="px-8 pb-6">
-          <div className="flex space-x-8 border-b border-gray-200/50">
-            {(['invoices', 'payments'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`pb-4 font-medium relative transition-all duration-200 cursor-pointer ${
-                  activeTab === tab
-                    ? 'text-purple-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+        
+        <main className="p-8">
+          {/* Breadcrumb & Actions */}
+          <div className="mb-8 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h1 className="text-2xl font-bold text-gray-900">Billing & Payments</h1>
+              <span className="text-xs font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
+                {formatCurrency(stats.totalRevenue)}
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => router.push('/admin/billing/new')}
+                className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-500/30 cursor-pointer"
               >
-                {tab === 'invoices' ? 'All Invoices' : 'Payment History'}
-                {activeTab === tab && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"></div>
-                )}
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">Create Invoice</span>
               </button>
-            ))}
+              <ActionButton icon={Download} label="Export" />
+              <ActionButton icon={RefreshCw} label="Refresh" onClick={loadBillingData} />
+              <ActionButton icon={Printer} label="Print" />
+            </div>
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="px-8 pb-8">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard
+              icon={DollarSign}
+              label="Total Revenue"
+              value={stats.totalRevenue}
+              change="+12.5%"
+              color="green"
+              isCurrency={true}
+            />
+            <StatCard
+              icon={Clock}
+              label="Pending Amount"
+              value={stats.pendingAmount}
+              change="+5.2%"
+              color="yellow"
+              isCurrency={true}
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Overdue Amount"
+              value={stats.overdueAmount}
+              change="-8.1%"
+              color="red"
+              isCurrency={true}
+            />
+            <StatCard
+              icon={FileText}
+              label="Total Invoices"
+              value={stats.invoicesCount}
+              change="+15"
+              color="purple"
+            />
+          </div>
+
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="mb-8 bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                <button 
+                  onClick={() => setFilters({ 
+                    status: 'all', 
+                    type: 'all', 
+                    dateRange: 'all', 
+                    amountRange: 'all' 
+                  })}
+                  className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['all', 'paid', 'pending', 'overdue', 'cancelled'].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => handleFilterChange('status', status)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                          filters.status === status
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Type</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['all', 'consultation', 'procedure', 'medication', 'test', 'other'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleFilterChange('type', type)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                          filters.type === type
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date Range Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Date Range</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['all', 'today', 'week', 'month', 'quarter'].map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => handleFilterChange('dateRange', range)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                          filters.dateRange === range
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {range.charAt(0).toUpperCase() + range.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Amount Range Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Amount Range</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['all', '0-100', '100-500', '500-1000', '1000+'].map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => handleFilterChange('amountRange', range)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+                          filters.amountRange === range
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {range}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="mb-6">
+            <div className="flex space-x-8 border-b border-gray-200/50">
+              {(['invoices', 'payments'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-4 font-medium relative transition-all duration-200 cursor-pointer ${
+                    activeTab === tab
+                      ? 'text-purple-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab === 'invoices' ? 'All Invoices' : 'Payment History'}
+                  {activeTab === tab && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Main Content */}
           {activeTab === 'invoices' ? (
             <InvoicesTable
               invoices={filteredInvoices}
@@ -440,191 +571,13 @@ const BillingModule = () => {
               getStatusColor={getStatusColor}
             />
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
 };
 
-// ========== SIDEBAR COMPONENT ==========
-const Sidebar: React.FC<{ handleLogout: () => void }> = ({ handleLogout }) => (
-  <div className="w-72 bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col fixed left-0 top-0 h-full z-20 shadow-lg shadow-purple-500/5">
-    <div className="p-8 pb-6">
-      <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-          <Shield className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">HealthMate</span>
-          <p className="text-xs text-gray-500 mt-1">Admin Portal</p>
-        </div>
-      </div>
-    </div>
-
-    <nav className="px-5 space-y-2 flex-1">
-      <NavItem icon={BarChart3} label="Dashboard" route="/admin/dashboard" />
-      <NavItem icon={Stethoscope} label="Doctors" route="/admin/doctors" />
-      <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
-      <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
-      <ActiveNavItem icon={CreditCard} label="Billing" />
-    </nav>
-
-    <div className="p-5 space-y-2 border-t border-gray-200/50">
-      <NavItem icon={HelpCircle} label="Help & Support" route="/admin/help" />
-      <div onClick={handleLogout} className="w-full"><NavItem icon={LogOut} label="Logout" /></div>
-    </div>
-
-    <div className="p-5 mt-auto">
-      <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200/50">
-        <p className="text-sm font-medium text-purple-800">System Status</p>
-        <div className="flex items-center space-x-2 mt-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <p className="text-xs text-purple-600/80">All systems operational</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const NavItem: React.FC<{ 
-  icon: React.ElementType; 
-  label: string; 
-  route?: string;
-}> = ({ icon: Icon, label, route }) => {
-  const router = useRouter();
-  
-  return (
-    <div 
-      onClick={() => route && router.push(route)}
-      className={`flex items-center justify-between px-5 py-3.5 rounded-xl transition-all duration-200 cursor-pointer ${
-        label === 'Billing' 
-          ? 'bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50'
-          : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900'
-      }`}
-    >
-      <div className="flex items-center space-x-3.5">
-        <Icon className={`w-5 h-5 ${label === 'Billing' ? 'text-purple-600' : 'text-gray-500'}`} />
-        <span className="font-medium">{label}</span>
-      </div>
-    </div>
-  );
-};
-
-const ActiveNavItem: React.FC<{ icon: React.ElementType; label: string }> = ({ icon: Icon, label }) => (
-  <div className="flex items-center justify-between px-5 py-3.5 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50 cursor-pointer">
-    <div className="flex items-center space-x-3.5">
-      <Icon className="w-5 h-5 text-purple-600" />
-      <span className="font-medium">{label}</span>
-    </div>
-  </div>
-);
-
-// ========== HEADER COMPONENT ==========
-const Header: React.FC<{
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  showFilters: boolean;
-  setShowFilters: (show: boolean) => void;
-}> = ({ searchQuery, setSearchQuery, showFilters, setShowFilters }) => (
-  <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-      </div>
-      <div className="flex items-center space-x-5">
-        <BellButton />
-        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl p-1">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-              showFilters ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Filter className="w-4 h-4 inline mr-2" />
-            Filters
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const SearchBar: React.FC<{ 
-  searchQuery: string; 
-  setSearchQuery: (query: string) => void 
-}> = ({ searchQuery, setSearchQuery }) => (
-  <div className="relative flex-1 max-w-lg">
-    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-    <input
-      type="text"
-      placeholder="Search invoices, patients, or invoice numbers..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200"
-    />
-  </div>
-);
-
-const BellButton: React.FC = () => (
-  <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
-    <Bell className="w-5 h-5 text-gray-600" />
-    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-  </button>
-);
-
-const ActionButton: React.FC<{ 
-  icon: React.ElementType; 
-  label: string;
-  onClick?: () => void;
-}> = ({ icon: Icon, label, onClick }) => (
-  <button 
-    onClick={onClick}
-    className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
-  >
-    <Icon className="w-4 h-4" />
-    <span className="text-sm font-medium">{label}</span>
-  </button>
-);
-
-// ========== STATS GRID COMPONENT ==========
-const StatsGrid: React.FC<{ stats: BillingStats }> = ({ stats }) => (
-  <div className="px-8 pb-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatCard
-        icon={DollarSign}
-        label="Total Revenue"
-        value={stats.totalRevenue}
-        change="+12.5%"
-        color="green"
-        isCurrency={true}
-      />
-      <StatCard
-        icon={Clock}
-        label="Pending Amount"
-        value={stats.pendingAmount}
-        change="+5.2%"
-        color="yellow"
-        isCurrency={true}
-      />
-      <StatCard
-        icon={AlertCircle}
-        label="Overdue Amount"
-        value={stats.overdueAmount}
-        change="-8.1%"
-        color="red"
-        isCurrency={true}
-      />
-      <StatCard
-        icon={FileText}
-        label="Total Invoices"
-        value={stats.invoicesCount}
-        change="+15"
-        color="purple"
-      />
-    </div>
-  </div>
-);
-
+// ========== STATS CARD COMPONENT ==========
 const StatCard: React.FC<{
   icon: React.ElementType;
   label: string;
@@ -645,124 +598,34 @@ const StatCard: React.FC<{
     : value;
 
   return (
-    <div className={`bg-gradient-to-br ${colorConfig[color].bg} border rounded-2xl p-6`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">{formattedValue}</p>
-          <p className={`text-xs font-medium mt-2 ${change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-            {change} from last month
-          </p>
-        </div>
-        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+    <div className={`bg-white rounded-2xl p-6 border border-gray-200/50 shadow-sm shadow-purple-500/5 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-3 rounded-xl ${colorConfig[color].bg} bg-opacity-10`}>
           <Icon className={`w-6 h-6 ${colorConfig[color].text}`} />
         </div>
+        <span className={`text-sm font-medium px-3 py-1 rounded-full ${change.startsWith('+') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {change.startsWith('+') ? '↑' : '↓'} {change}
+        </span>
       </div>
+      <h3 className="text-3xl font-bold text-gray-800 mb-1">{formattedValue}</h3>
+      <p className="text-gray-500 text-sm">{label}</p>
     </div>
   );
 };
 
-// ========== FILTERS PANEL COMPONENT ==========
-const FiltersPanel: React.FC<{
-  filters: FilterState;
-  onFilterChange: (key: keyof FilterState, value: string) => void;
-  onClearFilters: () => void;
-}> = ({ filters, onFilterChange, onClearFilters }) => (
-  <div className="px-8 pb-6">
-    <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-        <button 
-          onClick={onClearFilters}
-          className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer"
-        >
-          Clear All
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Status Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'paid', 'pending', 'overdue', 'cancelled'].map((status) => (
-              <button
-                key={status}
-                onClick={() => onFilterChange('status', status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.status === status
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Type Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Type</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'consultation', 'procedure', 'medication', 'test', 'other'].map((type) => (
-              <button
-                key={type}
-                onClick={() => onFilterChange('type', type)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.type === type
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date Range Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Date Range</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'today', 'week', 'month', 'quarter'].map((range) => (
-              <button
-                key={range}
-                onClick={() => onFilterChange('dateRange', range)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.dateRange === range
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Amount Range Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Amount Range</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', '0-100', '100-500', '500-1000', '1000+'].map((range) => (
-              <button
-                key={range}
-                onClick={() => onFilterChange('amountRange', range)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.amountRange === range
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+// ========== ACTION BUTTON COMPONENT ==========
+const ActionButton: React.FC<{ 
+  icon: React.ElementType; 
+  label: string;
+  onClick?: () => void;
+}> = ({ icon: Icon, label, onClick }) => (
+  <button 
+    onClick={onClick}
+    className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
+  >
+    <Icon className="w-4 h-4" />
+    <span className="text-sm font-medium">{label}</span>
+  </button>
 );
 
 // ========== INVOICES TABLE COMPONENT ==========
@@ -774,16 +637,17 @@ const InvoicesTable: React.FC<{
   formatCurrency: (amount: number) => string;
   getStatusColor: (status: Invoice['status']) => string;
 }> = ({ invoices, selectedInvoice, setSelectedInvoice, formatDate, formatCurrency, getStatusColor }) => (
-  <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 overflow-hidden">
-    <div className="border-b border-gray-200/50 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">All Invoices</h3>
-        <div className="flex items-center space-x-2">
-          <button className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
-            <ArrowUpDown className="w-4 h-4 inline mr-1" />
-            Sort
-          </button>
-        </div>
+  <div className="bg-white rounded-2xl border border-gray-200/50 shadow-sm shadow-purple-500/5 overflow-hidden">
+    <div className="px-6 py-4 border-b border-gray-200/50 flex items-center justify-between">
+      <div>
+        <h2 className="text-xl font-bold text-gray-800">All Invoices</h2>
+        <p className="text-gray-500 text-sm mt-1">Manage and review all invoices and billing information</p>
+      </div>
+      <div className="flex items-center space-x-2">
+        <button className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
+          <ArrowUpDown className="w-4 h-4 inline mr-1" />
+          Sort
+        </button>
       </div>
     </div>
     
@@ -791,14 +655,14 @@ const InvoicesTable: React.FC<{
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Invoice #</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Patient</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Date</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Due Date</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Amount</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
+            <tr className="border-b border-gray-200/50">
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Invoice #</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Patient</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Date</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Due Date</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Amount</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Status</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -808,48 +672,48 @@ const InvoicesTable: React.FC<{
                 return (
                   <tr 
                     key={invoice._id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 ${
+                    className={`border-b border-gray-100 hover:bg-purple-50/30 transition-colors duration-150 ${
                       selectedInvoice?._id === invoice._id ? 'bg-purple-50' : ''
                     }`}
                   >
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div>
-                        <p className="font-medium text-gray-900">{invoice.invoiceNumber}</p>
-                        <p className="text-xs text-gray-500">{invoice.type}</p>
+                        <p className="font-medium text-gray-800">{invoice.invoiceNumber}</p>
+                        <p className="text-sm text-gray-500">{invoice.type}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-purple-600" />
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {invoice.patientName.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{invoice.patientName}</p>
+                          <p className="font-medium text-gray-800">{invoice.patientName}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <p className="text-gray-900">{formatDate(invoice.date)}</p>
+                    <td className="py-4 px-6">
+                      <p className="text-gray-700 font-medium">{formatDate(invoice.date)}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <p className="text-gray-900">{formatDate(invoice.dueDate)}</p>
+                    <td className="py-4 px-6">
+                      <p className="text-gray-700 font-medium">{formatDate(invoice.dueDate)}</p>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div>
-                        <p className="font-medium text-gray-900">{formatCurrency(invoice.amount)}</p>
+                        <p className="font-medium text-gray-800">{formatCurrency(invoice.amount)}</p>
                         {paidPercentage > 0 && (
-                          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                             <div 
-                              className="bg-green-600 h-1.5 rounded-full" 
+                              className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full" 
                               style={{ width: `${Math.min(paidPercentage, 100)}%` }}
                             ></div>
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
                           {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                         </span>
                         {invoice.status === 'overdue' && (
@@ -857,19 +721,13 @@ const InvoicesTable: React.FC<{
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
                         <button 
                           onClick={() => setSelectedInvoice(invoice)}
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 cursor-pointer"
+                          className="text-purple-600 hover:text-purple-800 font-medium text-sm transition-colors duration-200 cursor-pointer"
                         >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
-                          <Download className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200 cursor-pointer">
-                          <DollarSign className="w-4 h-4" />
+                          View Details →
                         </button>
                       </div>
                     </td>
@@ -891,6 +749,22 @@ const InvoicesTable: React.FC<{
         </table>
       </div>
     </div>
+
+    {/* Table Footer */}
+    <div className="px-6 py-4 border-t border-gray-200/50 flex items-center justify-between">
+      <p className="text-gray-500 text-sm">
+        Showing <span className="font-medium text-gray-700">{invoices.length}</span> of{' '}
+        <span className="font-medium text-gray-700">{invoices.length}</span> invoices
+      </p>
+      <div className="flex items-center space-x-2">
+        <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer">
+          ← Previous
+        </button>
+        <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer">
+          Next →
+        </button>
+      </div>
+    </div>
   </div>
 );
 
@@ -902,16 +776,17 @@ const PaymentsTable: React.FC<{
   getPaymentMethodIcon: (method: Payment['method']) => React.ElementType;
   getPaymentStatusColor: (status: Payment['status']) => string;
 }> = ({ payments, formatDate, formatCurrency, getPaymentMethodIcon, getPaymentStatusColor }) => (
-  <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 overflow-hidden">
-    <div className="border-b border-gray-200/50 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
-        <div className="flex items-center space-x-2">
-          <button className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
-            <ArrowUpDown className="w-4 h-4 inline mr-1" />
-            Sort
-          </button>
-        </div>
+  <div className="bg-white rounded-2xl border border-gray-200/50 shadow-sm shadow-purple-500/5 overflow-hidden">
+    <div className="px-6 py-4 border-b border-gray-200/50 flex items-center justify-between">
+      <div>
+        <h2 className="text-xl font-bold text-gray-800">Payment History</h2>
+        <p className="text-gray-500 text-sm mt-1">View and manage all payment transactions</p>
+      </div>
+      <div className="flex items-center space-x-2">
+        <button className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
+          <ArrowUpDown className="w-4 h-4 inline mr-1" />
+          Sort
+        </button>
       </div>
     </div>
     
@@ -919,15 +794,15 @@ const PaymentsTable: React.FC<{
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Transaction ID</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Patient</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Invoice #</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Date</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Amount</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Method</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
+            <tr className="border-b border-gray-200/50">
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Transaction ID</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Patient</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Invoice #</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Date</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Amount</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Method</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Status</th>
+              <th className="text-left py-4 px-6 text-gray-500 font-medium text-sm">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -937,52 +812,49 @@ const PaymentsTable: React.FC<{
                 return (
                   <tr 
                     key={payment._id} 
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-all duration-200"
+                    className="border-b border-gray-100 hover:bg-purple-50/30 transition-colors duration-150"
                   >
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{payment.transactionId}</p>
+                    <td className="py-4 px-6">
+                      <p className="font-medium text-gray-800">{payment.transactionId}</p>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-purple-600" />
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {payment.patientName.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{payment.patientName}</p>
+                          <p className="font-medium text-gray-800">{payment.patientName}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <p className="text-purple-600 font-medium">{payment.invoiceNumber}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <p className="text-gray-900">{formatDate(payment.date)}</p>
+                    <td className="py-4 px-6">
+                      <p className="text-gray-700 font-medium">{formatDate(payment.date)}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <p className="font-medium text-gray-900">{formatCurrency(payment.amount)}</p>
+                    <td className="py-4 px-6">
+                      <p className="font-medium text-gray-800">{formatCurrency(payment.amount)}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <MethodIcon className="w-4 h-4 text-gray-600" />
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <MethodIcon className="w-5 h-5 text-gray-600" />
                         </div>
                         <span className="text-sm text-gray-600 capitalize">
                           {payment.method.replace('_', ' ')}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(payment.status)}`}>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${getPaymentStatusColor(payment.status)}`}>
                         {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
-                        <button className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 cursor-pointer">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
-                          <Receipt className="w-4 h-4" />
+                        <button className="text-purple-600 hover:text-purple-800 font-medium text-sm transition-colors duration-200 cursor-pointer">
+                          View Details →
                         </button>
                       </div>
                     </td>
@@ -1002,6 +874,22 @@ const PaymentsTable: React.FC<{
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+
+    {/* Table Footer */}
+    <div className="px-6 py-4 border-t border-gray-200/50 flex items-center justify-between">
+      <p className="text-gray-500 text-sm">
+        Showing <span className="font-medium text-gray-700">{payments.length}</span> of{' '}
+        <span className="font-medium text-gray-700">{payments.length}</span> payments
+      </p>
+      <div className="flex items-center space-x-2">
+        <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer">
+          ← Previous
+        </button>
+        <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200 cursor-pointer">
+          Next →
+        </button>
       </div>
     </div>
   </div>
