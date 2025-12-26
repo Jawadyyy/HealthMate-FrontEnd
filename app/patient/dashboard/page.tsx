@@ -578,10 +578,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({ appointment, formatDa
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer">
-            <FileText className="w-4 h-4" />
-            <span className="text-sm font-medium">View Details</span>
-          </button>
         </div>
       </div>
     </div>
