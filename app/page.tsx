@@ -116,7 +116,7 @@ export default function Home() {
                 <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-50">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20"></div>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-7xl">👨‍⚕️</div>
+                    <div className="text-7xl">🛌</div>
                   </div>
                   <div className="absolute top-4 right-4">
                     <span className="px-4 py-2 bg-blue-100/90 backdrop-blur-sm text-blue-700 text-sm font-semibold rounded-full flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function Home() {
                 <div className="relative h-56 overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-50">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-cyan-500/30"></div>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-8xl">🌙</div>
+                    <div className="text-8xl">🕒</div>
                   </div>
                   <div className="absolute top-4 right-4">
                     <span className="px-4 py-2 bg-blue-100/90 backdrop-blur-sm text-blue-700 text-xs font-semibold rounded-full flex items-center gap-2">
