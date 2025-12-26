@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Users, Search, Filter, Plus, Calendar, Phone, Mail, 
-  MapPin, ChevronRight, MoreVertical, Eye, FileText, 
-  Clock, Activity, Heart, User 
+import {
+  Users, Search, Filter, Plus, Calendar, Phone, Mail,
+  MapPin, ChevronRight, MoreVertical, Eye, FileText,
+  Clock, Activity, Heart, User
 } from 'lucide-react';
 import api from '@/lib/api/api';
 
@@ -43,11 +43,11 @@ const DoctorPatientsPage = () => {
 
   const formatDate = useCallback((dateString?: string): string => {
     if (!dateString) return 'Not scheduled';
-    
+
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Invalid date';
-      
+
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -61,13 +61,13 @@ const DoctorPatientsPage = () => {
 
   const getStatusColor = useCallback((status: Patient['status']) => {
     switch (status) {
-      case 'active': 
+      case 'active':
         return 'bg-green-100 text-green-700';
-      case 'new': 
+      case 'new':
         return 'bg-blue-100 text-blue-700';
-      case 'inactive': 
+      case 'inactive':
         return 'bg-gray-100 text-gray-700';
-      default: 
+      default:
         return 'bg-gray-100 text-gray-700';
     }
   }, []);
@@ -89,12 +89,12 @@ const DoctorPatientsPage = () => {
 
   const patientStats = useMemo((): PatientStats => {
     const today = getTodayDateString();
-    
+
     return {
       total: patients.length,
       active: patients.filter(p => p.status === 'active').length,
       new: patients.filter(p => p.status === 'new').length,
-      todayAppointments: patients.filter(p => 
+      todayAppointments: patients.filter(p =>
         p.nextAppointment && p.nextAppointment === today
       ).length
     };
@@ -106,9 +106,9 @@ const DoctorPatientsPage = () => {
     try {
       setLoading(true);
       const response = await api.get('/doctors/patients');
-      
+
       let fetchedPatients: Patient[] = [];
-      
+
       // Handle different response structures
       if (response.data?.data?.patients) {
         fetchedPatients = response.data.data.patients;
@@ -122,7 +122,7 @@ const DoctorPatientsPage = () => {
         console.warn('Unexpected API response structure:', response.data);
         throw new Error('Invalid response format');
       }
-      
+
       // Validate and normalize patient data
       const validatedPatients = fetchedPatients.map((patient: any) => ({
         _id: patient._id || patient.id || `patient-${Math.random().toString(36).substr(2, 9)}`,
@@ -133,11 +133,11 @@ const DoctorPatientsPage = () => {
         phone: patient.phone || patient.phoneNumber || undefined,
         lastVisit: patient.lastVisit || patient.lastAppointment || undefined,
         nextAppointment: patient.nextAppointment || patient.nextVisit || undefined,
-        conditions: Array.isArray(patient.conditions) ? patient.conditions : 
-                   patient.conditions ? [patient.conditions] : [],
+        conditions: Array.isArray(patient.conditions) ? patient.conditions :
+          patient.conditions ? [patient.conditions] : [],
         status: (patient.status as Patient['status']) || 'new'
       }));
-      
+
       setPatients(validatedPatients);
     } catch (error) {
       console.error('Error fetching patients:', error);
@@ -190,7 +190,7 @@ const DoctorPatientsPage = () => {
           status: 'active'
         }
       ];
-      
+
       setPatients(mockPatients);
     } finally {
       setLoading(false);
@@ -214,10 +214,10 @@ const DoctorPatientsPage = () => {
         const matchesName = patient.name.toLowerCase().includes(searchLower);
         const matchesEmail = patient.email.toLowerCase().includes(searchLower);
         const matchesPhone = patient.phone?.toLowerCase().includes(searchLower);
-        const matchesConditions = patient.conditions?.some(cond => 
+        const matchesConditions = patient.conditions?.some(cond =>
           cond.toLowerCase().includes(searchLower)
         );
-        
+
         return matchesName || matchesEmail || matchesPhone || matchesConditions;
       });
     }
@@ -292,13 +292,6 @@ const DoctorPatientsPage = () => {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Patients</h1>
               <p className="text-gray-500 mt-2">Manage and view your patient records</p>
             </div>
-            <button 
-              onClick={handleAddPatient}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-500/30 cursor-pointer w-full md:w-auto"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="font-medium">Add New Patient</span>
-            </button>
           </div>
 
           {/* Search and Filters */}
@@ -321,11 +314,10 @@ const DoctorPatientsPage = () => {
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                      activeFilter === filter
-                        ? 'bg-green-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeFilter === filter
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                      }`}
                   >
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </button>
@@ -348,7 +340,7 @@ const DoctorPatientsPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-2xl p-6 border border-gray-200/50 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -360,7 +352,7 @@ const DoctorPatientsPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-2xl p-6 border border-gray-200/50 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -372,7 +364,7 @@ const DoctorPatientsPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-2xl p-6 border border-gray-200/50 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -424,7 +416,7 @@ const DoctorPatientsPage = () => {
                         </div>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={(e) => handleMoreOptions(patient._id, e)}
                       className="text-gray-400 hover:text-gray-600 cursor-pointer p-1 hover:bg-gray-100 rounded-lg"
                       aria-label="More options"
@@ -479,13 +471,12 @@ const DoctorPatientsPage = () => {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">Next Appointment:</span>
-                      <span className={`font-medium ${
-                        patient.nextAppointment === getTodayDateString() 
-                          ? 'text-yellow-600' 
-                          : patient.nextAppointment 
-                            ? 'text-green-600' 
-                            : 'text-gray-500'
-                      }`}>
+                      <span className={`font-medium ${patient.nextAppointment === getTodayDateString()
+                        ? 'text-yellow-600'
+                        : patient.nextAppointment
+                          ? 'text-green-600'
+                          : 'text-gray-500'
+                        }`}>
                         {formatDate(patient.nextAppointment)}
                       </span>
                     </div>
@@ -493,7 +484,7 @@ const DoctorPatientsPage = () => {
 
                   {/* Actions */}
                   <div className="flex items-center justify-between">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleViewProfile(patient._id);
@@ -504,7 +495,7 @@ const DoctorPatientsPage = () => {
                       <span>View Profile</span>
                     </button>
                     <div className="flex items-center space-x-2">
-                      <button 
+                      <button
                         onClick={(e) => handleViewMedicalRecords(patient._id, e)}
                         className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
                         title="Medical Records"
@@ -512,7 +503,7 @@ const DoctorPatientsPage = () => {
                       >
                         <FileText className="w-4 h-4 text-gray-600" />
                       </button>
-                      <button 
+                      <button
                         onClick={(e) => handleScheduleAppointment(patient._id, e)}
                         className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
                         title="Schedule Appointment"
@@ -536,7 +527,7 @@ const DoctorPatientsPage = () => {
                   ? 'No patients match your search criteria. Try a different search term.'
                   : 'You have no patients in your practice yet.'}
               </p>
-              <button 
+              <button
                 onClick={handleAddPatient}
                 className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-500/30 cursor-pointer"
               >
@@ -544,7 +535,7 @@ const DoctorPatientsPage = () => {
                 <span>{searchTerm ? 'Clear Search' : 'Add Your First Patient'}</span>
               </button>
               {searchTerm && (
-                <button 
+                <button
                   onClick={() => setSearchTerm('')}
                   className="ml-4 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
                 >
