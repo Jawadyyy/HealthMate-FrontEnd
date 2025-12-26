@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   User, UserPlus, Search, Filter, Download, MoreVertical, 
   Eye, Edit, Trash2, Mail, Phone, MapPin, Calendar, Activity,
-  Shield, LogOut, HelpCircle, BarChart3, Stethoscope, CreditCard,
   Bell, ChevronRight, RefreshCw, Plus, AlertCircle, CheckCircle,
-  XCircle, ChevronDown, ArrowUpDown, FileText
+  XCircle, ChevronDown, ArrowUpDown, FileText, XCircle as XCircleIcon,
+  Heart, Clock, Stethoscope, Pill, Shield, AlertTriangle, Thermometer
 } from 'lucide-react';
 import api from '@/lib/api/api';
 import { useRouter } from 'next/navigation';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
 
 // ========== TYPES ==========
 interface Patient {
@@ -27,6 +29,9 @@ interface Patient {
   status: 'active' | 'inactive' | 'pending';
   createdAt: string;
   updatedAt: string;
+  age?: number;
+  upcomingAppointments?: number;
+  totalVisits?: number;
 }
 
 interface PatientStats {
@@ -61,7 +66,10 @@ const MOCK_PATIENTS: Patient[] = [
     lastVisit: '2024-01-15',
     status: 'active',
     createdAt: '2023-05-20',
-    updatedAt: '2024-01-15'
+    updatedAt: '2024-01-15',
+    age: 38,
+    upcomingAppointments: 2,
+    totalVisits: 12
   },
   {
     _id: 'p002',
@@ -77,7 +85,10 @@ const MOCK_PATIENTS: Patient[] = [
     lastVisit: '2024-01-18',
     status: 'active',
     createdAt: '2023-08-10',
-    updatedAt: '2024-01-18'
+    updatedAt: '2024-01-18',
+    age: 33,
+    upcomingAppointments: 1,
+    totalVisits: 8
   },
   {
     _id: 'p003',
@@ -93,7 +104,10 @@ const MOCK_PATIENTS: Patient[] = [
     lastVisit: '2024-01-10',
     status: 'inactive',
     createdAt: '2022-12-05',
-    updatedAt: '2024-01-10'
+    updatedAt: '2024-01-10',
+    age: 45,
+    upcomingAppointments: 0,
+    totalVisits: 5
   },
   {
     _id: 'p004',
@@ -109,7 +123,10 @@ const MOCK_PATIENTS: Patient[] = [
     lastVisit: '2024-01-20',
     status: 'active',
     createdAt: '2024-01-05',
-    updatedAt: '2024-01-20'
+    updatedAt: '2024-01-20',
+    age: 28,
+    upcomingAppointments: 3,
+    totalVisits: 1
   },
   {
     _id: 'p005',
@@ -125,7 +142,67 @@ const MOCK_PATIENTS: Patient[] = [
     lastVisit: '2023-12-28',
     status: 'pending',
     createdAt: '2023-11-15',
-    updatedAt: '2024-01-02'
+    updatedAt: '2024-01-02',
+    age: 41,
+    upcomingAppointments: 0,
+    totalVisits: 4
+  },
+  {
+    _id: 'p006',
+    name: 'Olivia Martinez',
+    email: 'olivia.m@email.com',
+    phone: '+1 (555) 789-0123',
+    dateOfBirth: '1988-12-10',
+    gender: 'female',
+    bloodGroup: 'A-',
+    address: '303 Pine St, Manhattan, NY 10016',
+    emergencyContact: '+1 (555) 234-5678 (Carlos Martinez)',
+    medicalConditions: ['Diabetes Type 1', 'Hypertension'],
+    lastVisit: '2024-01-22',
+    status: 'active',
+    createdAt: '2023-06-15',
+    updatedAt: '2024-01-22',
+    age: 35,
+    upcomingAppointments: 1,
+    totalVisits: 15
+  },
+  {
+    _id: 'p007',
+    name: 'Robert Taylor',
+    email: 'robert.t@email.com',
+    phone: '+1 (555) 234-5678',
+    dateOfBirth: '1975-02-28',
+    gender: 'male',
+    bloodGroup: 'B-',
+    address: '404 Cedar Ave, Brooklyn, NY 11215',
+    emergencyContact: '+1 (555) 345-6789 (Maria Taylor)',
+    medicalConditions: ['COPD', 'Sleep Apnea'],
+    lastVisit: '2023-11-30',
+    status: 'inactive',
+    createdAt: '2022-09-20',
+    updatedAt: '2023-11-30',
+    age: 48,
+    upcomingAppointments: 0,
+    totalVisits: 9
+  },
+  {
+    _id: 'p008',
+    name: 'Emma Anderson',
+    email: 'emma.a@email.com',
+    phone: '+1 (555) 345-6789',
+    dateOfBirth: '1992-08-14',
+    gender: 'female',
+    bloodGroup: 'O+',
+    address: '505 Maple Dr, Queens, NY 11374',
+    emergencyContact: '+1 (555) 456-7890 (Thomas Anderson)',
+    medicalConditions: ['Thyroid Disorder'],
+    lastVisit: '2024-01-25',
+    status: 'active',
+    createdAt: '2023-10-10',
+    updatedAt: '2024-01-25',
+    age: 31,
+    upcomingAppointments: 2,
+    totalVisits: 6
   }
 ];
 
@@ -147,13 +224,14 @@ const PatientsModule = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
     gender: 'all',
     search: '',
     dateRange: 'all'
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(8);
 
   useEffect(() => {
     loadPatients();
@@ -171,8 +249,9 @@ const PatientsModule = () => {
         api.get('/patients/stats')
       ]);
 
-      setPatients(patientsRes.data.data || patientsRes.data || MOCK_PATIENTS);
-      setFilteredPatients(patientsRes.data.data || patientsRes.data || MOCK_PATIENTS);
+      const patientsData = patientsRes.data.data || patientsRes.data || MOCK_PATIENTS;
+      setPatients(patientsData);
+      setFilteredPatients(patientsData);
       setStats(statsRes.data.data || statsRes.data || MOCK_STATS);
     } catch (error) {
       console.error('Error loading patients:', error);
@@ -208,7 +287,7 @@ const PatientsModule = () => {
       filtered = filtered.filter(patient => patient.gender === filters.gender);
     }
 
-    // Date range filter (simplified)
+    // Date range filter
     if (filters.dateRange !== 'all') {
       const now = new Date();
       filtered = filtered.filter(patient => {
@@ -230,15 +309,11 @@ const PatientsModule = () => {
     }
 
     setFilteredPatients(filtered);
+    setCurrentPage(1);
   };
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleLogout = () => {
-    ['token', 'role', 'isLoggedIn'].forEach(key => localStorage.removeItem(key));
-    router.push('/auth/admin/login');
   };
 
   const formatDate = (dateString: string) => {
@@ -272,391 +347,406 @@ const PatientsModule = () => {
     return colors[bloodGroup] || 'bg-gray-100 text-gray-700';
   };
 
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPatients = filteredPatients.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+
   if (loading && !patients.length) {
     return <LoadingScreen message="Loading patients..." />;
   }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
-      <Sidebar handleLogout={handleLogout} />
-
+      <Sidebar activeRoute="/admin/patients" />
+      
       <div className="flex-1 overflow-auto ml-72">
         <Header 
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
+          adminData={{ name: 'System Admin' }}
+          searchPlaceholder="Search patients..."
         />
-
-        {/* Breadcrumb & Actions */}
-        <div className="px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-gray-900">Patients Management</h1>
-            <span className="text-xs font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
-              {filteredPatients.length} patients
-            </span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button 
-              onClick={() => router.push('/admin/patients/new')}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-500/30 cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span className="text-sm font-medium">Add New Patient</span>
-            </button>
-            <ActionButton icon={Download} label="Export" />
-            <ActionButton icon={RefreshCw} label="Refresh" onClick={loadPatients} />
+        
+        {/* Page Header */}
+        <div className="sticky top-[84px] z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Patients Management</h1>
+              <span className="text-sm font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
+                {filteredPatients.length} patients
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={loadPatients}
+                className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm font-medium">Refresh</span>
+              </button>
+              <button 
+                onClick={() => router.push('/admin/patients/new')}
+                className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-500/30 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-sm font-medium">Add New Patient</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <StatsGrid stats={stats} />
+        <div className="px-8 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            <StatCard
+              icon={User}
+              label="Total Patients"
+              value={stats.total}
+              change="+12%"
+              color="purple"
+            />
+            <StatCard
+              icon={CheckCircle}
+              label="Active"
+              value={stats.active}
+              change="+8%"
+              color="green"
+            />
+            <StatCard
+              icon={XCircle}
+              label="Inactive"
+              value={stats.inactive}
+              change="-2%"
+              color="red"
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Pending"
+              value={stats.pending}
+              change="+5"
+              color="yellow"
+            />
+            <StatCard
+              icon={UserPlus}
+              label="New This Month"
+              value={stats.newThisMonth}
+              change="+15%"
+              color="blue"
+            />
+            <StatCard
+              icon={Calendar}
+              label="Appointments Today"
+              value={stats.appointmentsToday}
+              change="+3"
+              color="purple"
+            />
+          </div>
+        </div>
 
         {/* Filters Panel */}
-        {showFilters && (
-          <FiltersPanel
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onClearFilters={() => setFilters({ status: 'all', gender: 'all', search: '', dateRange: 'all' })}
-          />
-        )}
-
-        {/* Patients Table */}
-        <div className="px-8 pb-8">
-          <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 overflow-hidden">
-            <div className="border-b border-gray-200/50 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">All Patients</h3>
+        <div className="px-8 pb-6">
+          <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+              <div className="flex items-center space-x-4">
+                <div className="relative flex-1 max-w-lg">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search patients by name, email, or phone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200"
+                  />
+                </div>
+                
                 <div className="flex items-center space-x-2">
-                  <button className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
-                    <ArrowUpDown className="w-4 h-4 inline mr-1" />
-                    Sort
-                  </button>
+                  <Filter className="w-4 h-4 text-gray-400" />
+                  <select
+                    value={filters.status}
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-sm"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                  </select>
                 </div>
               </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Patient</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contact</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Medical Info</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Last Visit</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPatients.length > 0 ? (
-                      filteredPatients.map((patient) => (
-                        <tr 
-                          key={patient._id} 
-                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 ${
-                            selectedPatient?._id === patient._id ? 'bg-purple-50' : ''
-                          }`}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                <User className="w-5 h-5 text-purple-600" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{patient.name}</p>
-                                <p className="text-xs text-gray-500">
-                                  {patient.gender === 'male' ? 'Male' : 'Female'} • {patient.dateOfBirth}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="space-y-1">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Mail className="w-3 h-3 mr-2" />
-                                {patient.email}
-                              </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Phone className="w-3 h-3 mr-2" />
-                                {patient.phone}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>
-                                  {patient.bloodGroup}
-                                </span>
-                                {patient.medicalConditions.length > 0 && (
-                                  <span className="text-xs text-gray-500">
-                                    {patient.medicalConditions.length} condition(s)
-                                  </span>
-                                )}
-                              </div>
-                              {patient.emergencyContact && (
-                                <div className="text-xs text-gray-500">
-                                  Emergency: {patient.emergencyContact}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div>
-                              <p className="font-medium text-gray-900">{formatDate(patient.lastVisit)}</p>
-                              <p className="text-xs text-gray-500">Member since {formatDate(patient.createdAt)}</p>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(patient.status)}`}>
-                                {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
-                              </span>
-                              <StatusDropdown 
-                                currentStatus={patient.status}
-                                onStatusChange={(newStatus) => console.log('Update status:', newStatus)}
-                              />
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <button 
-                                onClick={() => setSelectedPatient(patient)}
-                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 cursor-pointer"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => router.push(`/admin/patients/${patient._id}/edit`)}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button 
-                                onClick={() => console.log('Delete patient:', patient._id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="py-12 text-center">
-                          <div className="text-gray-400">
-                            <User className="w-12 h-12 mx-auto mb-4" />
-                            <p className="text-lg font-medium">No patients found</p>
-                            <p className="text-sm mt-1">Try adjusting your search or filters</p>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={filters.gender}
+                    onChange={(e) => handleFilterChange('gender', e.target.value)}
+                    className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-sm"
+                  >
+                    <option value="all">All Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={filters.dateRange}
+                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                    className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-sm"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="week">Last Week</option>
+                    <option value="month">Last Month</option>
+                    <option value="year">Last Year</option>
+                  </select>
+                </div>
+                
+                <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
+                  <Download className="w-4 h-4" />
+                  <span className="text-sm font-medium">Export</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Patient Detail Modal */}
-        {selectedPatient && (
-          <PatientDetailModal
-            patient={selectedPatient}
-            onClose={() => setSelectedPatient(null)}
-            formatDate={formatDate}
-            getStatusColor={getStatusColor}
-            getBloodGroupColor={getBloodGroupColor}
-          />
-        )}
+        {/* Patients Grid */}
+        <div className="px-8 pb-8">
+          <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">All Patients</h3>
+              <p className="text-sm text-gray-500">
+                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredPatients.length)} of {filteredPatients.length} patients
+              </p>
+            </div>
+            
+            {currentPatients.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {currentPatients.map((patient) => (
+                  <PatientCard 
+                    key={patient._id}
+                    patient={patient}
+                    onView={() => setSelectedPatient(patient)}
+                    formatDate={formatDate}
+                    getStatusColor={getStatusColor}
+                    getBloodGroupColor={getBloodGroupColor}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 px-6 text-center">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">No patients found</p>
+                  <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
+                </div>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {filteredPatients.length > itemsPerPage && (
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="px-8 pb-8">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                <p className="text-sm text-gray-500">Manage patients efficiently</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <ActionCard
+                icon={Plus}
+                title="Register Patient"
+                description="Add new patient to the system"
+                color="purple"
+                onClick={() => router.push('/admin/patients/new')}
+              />
+              <ActionCard
+                icon={Calendar}
+                title="Schedule Appointment"
+                description="Book new appointment"
+                color="blue"
+                onClick={() => {}}
+              />
+              <ActionCard
+                icon={FileText}
+                title="Generate Reports"
+                description="Create patient reports"
+                color="green"
+                onClick={() => {}}
+              />
+              <ActionCard
+                icon={Bell}
+                title="Send Notifications"
+                description="Notify patients about updates"
+                color="red"
+                onClick={() => {}}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Patient Detail Modal */}
+      {selectedPatient && (
+        <PatientDetailModal
+          patient={selectedPatient}
+          onClose={() => setSelectedPatient(null)}
+          formatDate={formatDate}
+          getStatusColor={getStatusColor}
+          getBloodGroupColor={getBloodGroupColor}
+        />
+      )}
     </div>
   );
 };
 
-// ========== SIDEBAR COMPONENT ==========
-const Sidebar: React.FC<{ handleLogout: () => void }> = ({ handleLogout }) => (
-  <div className="w-72 bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col fixed left-0 top-0 h-full z-20 shadow-lg shadow-purple-500/5">
-    <div className="p-8 pb-6">
-      <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-          <Shield className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">HealthMate</span>
-          <p className="text-xs text-gray-500 mt-1">Admin Portal</p>
-        </div>
-      </div>
-    </div>
-
-    <nav className="px-5 space-y-2 flex-1">
-      <NavItem icon={BarChart3} label="Dashboard" route="/admin/dashboard" />
-      <NavItem icon={Stethoscope} label="Doctors" route="/admin/doctors" />
-      <NavItem icon={UserPlus} label="Patients" />
-      <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
-      <NavItem icon={CreditCard} label="Billing" route="/admin/billing" />
-    </nav>
-
-    <div className="p-5 space-y-2 border-t border-gray-200/50">
-      <NavItem icon={HelpCircle} label="Help & Support" route="/admin/help" />
-      <div onClick={handleLogout} className="w-full"><NavItem icon={LogOut} label="Logout" /></div>
-    </div>
-
-    <div className="p-5 mt-auto">
-      <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200/50">
-        <p className="text-sm font-medium text-purple-800">System Status</p>
-        <div className="flex items-center space-x-2 mt-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <p className="text-xs text-purple-600/80">All systems operational</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const NavItem: React.FC<{ 
-  icon: React.ElementType; 
-  label: string; 
-  route?: string;
-}> = ({ icon: Icon, label, route }) => {
-  const router = useRouter();
-  
+// ========== PATIENT CARD COMPONENT ==========
+const PatientCard: React.FC<{
+  patient: Patient;
+  onView: () => void;
+  formatDate: (date: string) => string;
+  getStatusColor: (status: 'active' | 'inactive' | 'pending') => string;
+  getBloodGroupColor: (bloodGroup: string) => string;
+}> = ({ patient, onView, formatDate, getStatusColor, getBloodGroupColor }) => {
   return (
-    <div 
-      onClick={() => route && router.push(route)}
-      className={`flex items-center justify-between px-5 py-3.5 rounded-xl transition-all duration-200 cursor-pointer ${
-        label === 'Patients' 
-          ? 'bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50'
-          : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900'
-      }`}
-    >
-      <div className="flex items-center space-x-3.5">
-        <Icon className={`w-5 h-5 ${label === 'Patients' ? 'text-purple-600' : 'text-gray-500'}`} />
-        <span className="font-medium">{label}</span>
-      </div>
-    </div>
-  );
-};
-
-// ========== HEADER COMPONENT ==========
-const Header: React.FC<{
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  showFilters: boolean;
-  setShowFilters: (show: boolean) => void;
-}> = ({ searchQuery, setSearchQuery, showFilters, setShowFilters }) => (
-  <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-      </div>
-      <div className="flex items-center space-x-5">
-        <BellButton />
-        <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl p-1">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-              showFilters ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-            }`}
+    <div className="bg-white border border-gray-200/50 rounded-2xl p-5 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group">
+      {/* Header with Avatar and Actions */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+            {patient.name.charAt(0)}
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900">{patient.name}</h3>
+            <p className="text-xs text-gray-500">
+              {patient.gender === 'male' ? 'Male' : 'Female'} • {patient.age} years
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-1">
+          <button 
+            onClick={onView}
+            className="p-1.5 hover:bg-purple-50 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-purple-600"
+            title="View Details"
           >
-            <Filter className="w-4 h-4 inline mr-2" />
-            Filters
+            <Eye className="w-4 h-4" />
+          </button>
+          <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500">
+            <MoreVertical className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {/* Contact Information */}
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center text-xs text-gray-600">
+          <Mail className="w-3 h-3 mr-2 flex-shrink-0" />
+          <span className="truncate">{patient.email}</span>
+        </div>
+        <div className="flex items-center text-xs text-gray-600">
+          <Phone className="w-3 h-3 mr-2 flex-shrink-0" />
+          <span className="truncate">{patient.phone}</span>
+        </div>
+        {patient.address && (
+          <div className="flex items-center text-xs text-gray-600">
+            <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
+            <span className="truncate">{patient.address.split(',')[0]}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Medical Badges */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(patient.status)}`}>
+          {patient.status === 'active' && <CheckCircle className="w-3 h-3 mr-1" />}
+          {patient.status === 'pending' && <AlertCircle className="w-3 h-3 mr-1" />}
+          {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+        </span>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>
+          {patient.bloodGroup}
+        </span>
+        {patient.medicalConditions.length > 0 && (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            {patient.medicalConditions.length} conditions
+          </span>
+        )}
+      </div>
+
+      {/* Medical Conditions Preview */}
+      <div className="mb-4">
+        <p className="text-xs text-gray-500 mb-2">Medical Conditions</p>
+        <div className="flex flex-wrap gap-1">
+          {patient.medicalConditions.slice(0, 2).map((condition, index) => (
+            <span key={index} className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded">
+              {condition}
+            </span>
+          ))}
+          {patient.medicalConditions.length > 2 && (
+            <span className="text-xs text-gray-400">+{patient.medicalConditions.length - 2} more</span>
+          )}
+          {patient.medicalConditions.length === 0 && (
+            <span className="text-xs text-gray-400">No conditions</span>
+          )}
+        </div>
+      </div>
+
+      {/* Visit Statistics */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-purple-50/50 rounded-lg p-3">
+          <div className="flex items-center space-x-2">
+            <Calendar className="w-3 h-3 text-purple-600" />
+            <span className="text-xs text-gray-600">Last Visit</span>
+          </div>
+          <p className="text-sm font-medium text-gray-900 mt-1">{formatDate(patient.lastVisit)}</p>
+        </div>
+        <div className="bg-green-50/50 rounded-lg p-3">
+          <div className="flex items-center space-x-2">
+            <Activity className="w-3 h-3 text-green-600" />
+            <span className="text-xs text-gray-600">Total Visits</span>
+          </div>
+          <p className="text-sm font-medium text-gray-900 mt-1">{patient.totalVisits || 0}</p>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-between pt-4 border-t border-gray-200/50">
+        <div className="flex items-center space-x-1">
+          <button 
+            onClick={() => {/* Edit patient */}}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-blue-600"
+            title="Edit"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => console.log('Delete patient:', patient._id)}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-red-600"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="text-xs text-gray-500">
+          Joined {formatDate(patient.createdAt)}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-const SearchBar: React.FC<{ 
-  searchQuery: string; 
-  setSearchQuery: (query: string) => void 
-}> = ({ searchQuery, setSearchQuery }) => (
-  <div className="relative flex-1 max-w-lg">
-    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-    <input
-      type="text"
-      placeholder="Search patients by name, email, or phone..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200"
-    />
-  </div>
-);
-
-const BellButton: React.FC = () => (
-  <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
-    <Bell className="w-5 h-5 text-gray-600" />
-    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-  </button>
-);
-
-const ActionButton: React.FC<{ 
-  icon: React.ElementType; 
-  label: string;
-  onClick?: () => void;
-}> = ({ icon: Icon, label, onClick }) => (
-  <button 
-    onClick={onClick}
-    className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
-  >
-    <Icon className="w-4 h-4" />
-    <span className="text-sm font-medium">{label}</span>
-  </button>
-);
-
-// ========== STATS GRID COMPONENT ==========
-const StatsGrid: React.FC<{ stats: PatientStats }> = ({ stats }) => (
-  <div className="px-8 pb-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-      <StatCard
-        icon={User}
-        label="Total Patients"
-        value={stats.total}
-        change="+12%"
-        color="purple"
-      />
-      <StatCard
-        icon={CheckCircle}
-        label="Active"
-        value={stats.active}
-        change="+8%"
-        color="green"
-      />
-      <StatCard
-        icon={XCircle}
-        label="Inactive"
-        value={stats.inactive}
-        change="-2%"
-        color="red"
-      />
-      <StatCard
-        icon={AlertCircle}
-        label="Pending"
-        value={stats.pending}
-        change="+5"
-        color="yellow"
-      />
-      <StatCard
-        icon={UserPlus}
-        label="New This Month"
-        value={stats.newThisMonth}
-        change="+15%"
-        color="blue"
-      />
-      <StatCard
-        icon={Calendar}
-        label="Appointments Today"
-        value={stats.appointmentsToday}
-        change="+3"
-        color="purple"
-      />
-    </div>
-  </div>
-);
-
+// ========== STATS CARD COMPONENT ==========
 const StatCard: React.FC<{
   icon: React.ElementType;
   label: string;
@@ -690,153 +780,120 @@ const StatCard: React.FC<{
   );
 };
 
-// ========== FILTERS PANEL COMPONENT ==========
-const FiltersPanel: React.FC<{
-  filters: FilterState;
-  onFilterChange: (key: keyof FilterState, value: string) => void;
-  onClearFilters: () => void;
-}> = ({ filters, onFilterChange, onClearFilters }) => (
-  <div className="px-8 pb-6">
-    <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-        <button 
-          onClick={onClearFilters}
-          className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer"
-        >
-          Clear All
-        </button>
+// ========== ACTION CARD COMPONENT ==========
+const ActionCard: React.FC<{
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  color: 'purple' | 'green' | 'blue' | 'red';
+  onClick: () => void;
+}> = ({ icon: Icon, title, description, color, onClick }) => {
+  const colorClasses = {
+    purple: 'bg-purple-100 text-purple-600',
+    green: 'bg-green-100 text-green-600',
+    blue: 'bg-blue-100 text-blue-600',
+    red: 'bg-red-100 text-red-600'
+  };
+
+  return (
+    <button onClick={onClick} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group">
+      <div className="flex items-start space-x-4">
+        <div className={`w-12 h-12 ${colorClasses[color]} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-200`}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-600 transition-all duration-200">{title}</h4>
+          <p className="text-sm text-gray-500">{description}</p>
+        </div>
+      </div>
+    </button>
+  );
+};
+
+// ========== PAGINATION COMPONENT ==========
+const Pagination: React.FC<{
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}> = ({ currentPage, totalPages, onPageChange }) => (
+  <div className="border-t border-gray-200/50 px-6 py-4 mt-6">
+    <div className="flex items-center justify-between">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 ${
+          currentPage === 1 
+            ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+            : 'border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer'
+        }`}
+      >
+        <ChevronRight className="w-4 h-4 rotate-180" />
+        <span className="text-sm font-medium">Previous</span>
+      </button>
+      
+      <div className="flex items-center space-x-2">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+          <button
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={`w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200 ${
+              currentPage === page
+                ? 'bg-purple-600 text-white'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {page}
+          </button>
+        ))}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Status Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'active', 'inactive', 'pending'].map((status) => (
-              <button
-                key={status}
-                onClick={() => onFilterChange('status', status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.status === status
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Gender Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Gender</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'male', 'female', 'other'].map((gender) => (
-              <button
-                key={gender}
-                onClick={() => onFilterChange('gender', gender)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.gender === gender
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {gender.charAt(0).toUpperCase() + gender.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date Range Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Date Range</label>
-          <div className="flex flex-wrap gap-2">
-            {['all', 'week', 'month', 'year'].map((range) => (
-              <button
-                key={range}
-                onClick={() => onFilterChange('dateRange', range)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  filters.dateRange === range
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 ${
+          currentPage === totalPages
+            ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+            : 'border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer'
+        }`}
+      >
+        <span className="text-sm font-medium">Next</span>
+        <ChevronRight className="w-4 h-4" />
+      </button>
     </div>
   </div>
 );
-
-// ========== STATUS DROPDOWN COMPONENT ==========
-const StatusDropdown: React.FC<{
-  currentStatus: Patient['status'];
-  onStatusChange: (status: Patient['status']) => void;
-}> = ({ currentStatus, onStatusChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const statuses: Patient['status'][] = ['active', 'inactive', 'pending'];
-
-  return (
-    <div className="relative">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
-      >
-        <MoreVertical className="w-4 h-4" />
-      </button>
-      
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="py-1">
-            {statuses.map((status) => (
-              <button
-                key={status}
-                onClick={() => {
-                  onStatusChange(status);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-all duration-200 cursor-pointer"
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ========== PATIENT DETAIL MODAL COMPONENT ==========
 const PatientDetailModal: React.FC<{
   patient: Patient;
   onClose: () => void;
   formatDate: (date: string) => string;
-  getStatusColor: (status: Patient['status']) => string;
+  getStatusColor: (status: 'active' | 'inactive' | 'pending') => string;
   getBloodGroupColor: (bloodGroup: string) => string;
 }> = ({ patient, onClose, formatDate, getStatusColor, getBloodGroupColor }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300" onClick={onClose} />
+    <div className="relative w-full max-w-6xl mx-auto max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl transition-all duration-300">
       <div className="p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-              <User className="w-8 h-8 text-purple-600" />
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+              {patient.name.charAt(0)}
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
               <div className="flex items-center space-x-3 mt-2">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(patient.status)}`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(patient.status)}`}>
+                  {patient.status === 'active' && <CheckCircle className="w-4 h-4 mr-1" />}
+                  {patient.status === 'pending' && <AlertCircle className="w-4 h-4 mr-1" />}
                   {patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
                 </span>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>
                   {patient.bloodGroup}
+                </span>
+                <span className="text-sm text-gray-600">
+                  {patient.gender === 'male' ? 'Male' : 'Female'} • {patient.age} years
                 </span>
               </div>
             </div>
@@ -845,7 +902,7 @@ const PatientDetailModal: React.FC<{
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer"
           >
-            <XCircle className="w-6 h-6 text-gray-400" />
+            <XCircleIcon className="w-6 h-6 text-gray-400" />
           </button>
         </div>
 
@@ -860,9 +917,9 @@ const PatientDetailModal: React.FC<{
             <div className="space-y-3">
               <DetailRow label="Email" value={patient.email} icon={Mail} />
               <DetailRow label="Phone" value={patient.phone} icon={Phone} />
-              <DetailRow label="Date of Birth" value={patient.dateOfBirth} />
-              <DetailRow label="Gender" value={patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)} />
+              <DetailRow label="Date of Birth" value={`${patient.dateOfBirth} (${patient.age} years)`} />
               <DetailRow label="Address" value={patient.address} icon={MapPin} />
+              <DetailRow label="Emergency Contact" value={patient.emergencyContact} icon={Phone} />
             </div>
           </div>
 
@@ -873,8 +930,13 @@ const PatientDetailModal: React.FC<{
               Medical Information
             </h3>
             <div className="space-y-3">
-              <DetailRow label="Blood Group" value={patient.bloodGroup} />
-              <DetailRow label="Emergency Contact" value={patient.emergencyContact} icon={Phone} />
+              <div className="flex justify-between items-center py-2 border-b border-gray-200/50">
+                <span className="text-sm text-gray-600">Blood Group</span>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>
+                  {patient.bloodGroup}
+                </span>
+              </div>
+              
               <div>
                 <p className="text-sm text-gray-600 mb-2">Medical Conditions</p>
                 <div className="flex flex-wrap gap-2">
@@ -889,14 +951,17 @@ const PatientDetailModal: React.FC<{
                   )}
                 </div>
               </div>
+              
+              <DetailRow label="Last Visit" value={formatDate(patient.lastVisit)} icon={Calendar} />
+              <DetailRow label="Member Since" value={formatDate(patient.createdAt)} />
             </div>
           </div>
 
           {/* Visit History */}
-          <div className="lg:col-span-2 bg-purple-50/50 border border-purple-200/50 rounded-xl p-5">
+          <div className="lg:col-span-2 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-xl p-5">
             <h3 className="font-medium text-purple-900 mb-4 flex items-center">
               <Calendar className="w-5 h-5 mr-2 text-purple-600" />
-              Visit History
+              Visit History & Statistics
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white p-4 rounded-xl border border-purple-100">
@@ -904,16 +969,16 @@ const PatientDetailModal: React.FC<{
                 <p className="font-medium text-gray-900 mt-1">{formatDate(patient.lastVisit)}</p>
               </div>
               <div className="bg-white p-4 rounded-xl border border-purple-100">
-                <p className="text-sm text-gray-600">Member Since</p>
-                <p className="font-medium text-gray-900 mt-1">{formatDate(patient.createdAt)}</p>
-              </div>
-              <div className="bg-white p-4 rounded-xl border border-purple-100">
                 <p className="text-sm text-gray-600">Total Visits</p>
-                <p className="font-medium text-gray-900 mt-1">12</p>
+                <p className="font-medium text-gray-900 mt-1">{patient.totalVisits || 0}</p>
               </div>
               <div className="bg-white p-4 rounded-xl border border-purple-100">
-                <p className="text-sm text-gray-600">Pending Appointments</p>
-                <p className="font-medium text-gray-900 mt-1">2</p>
+                <p className="text-sm text-gray-600">Upcoming Appointments</p>
+                <p className="font-medium text-gray-900 mt-1">{patient.upcomingAppointments || 0}</p>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-purple-100">
+                <p className="text-sm text-gray-600">Average Wait Time</p>
+                <p className="font-medium text-gray-900 mt-1">15 mins</p>
               </div>
             </div>
           </div>
@@ -953,7 +1018,7 @@ const DetailRow: React.FC<{
       {Icon && <Icon className="w-4 h-4 mr-2" />}
       {label}
     </span>
-    <span className="font-medium text-gray-900">{value}</span>
+    <span className="font-medium text-gray-900 text-right">{value}</span>
   </div>
 );
 

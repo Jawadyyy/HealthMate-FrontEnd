@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Clock, Users, UserPlus, Stethoscope, Calendar, CreditCard, Settings, 
-  LogOut, HelpCircle, Search, Edit, Plus, FileText, ChevronRight, Bell, 
-  Download, Filter, MoreVertical, BarChart3, TrendingUp, Shield, Activity, 
-  UserCheck, UserX, DollarSign, ClipboardList, AlertCircle, CheckCircle, 
-  XCircle, Eye, Trash2, Archive 
+  UserPlus, Stethoscope, Calendar, CreditCard, UserCheck, Activity,
+  Plus, Download, TrendingUp, AlertCircle, CheckCircle,
+  Clock, DollarSign
 } from 'lucide-react';
 import api from '@/lib/api/api';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
          ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, 
          AreaChart, Area } from 'recharts';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
 
 interface AdminData {
   _id: string;
@@ -38,32 +38,6 @@ interface AnalyticsData {
 }
 
 const COLORS = ['#7c3aed', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-const NavItem: React.FC<{ 
-  icon: React.ElementType; 
-  label: string; 
-  badge?: number; 
-  route?: string;
-}> = ({ icon: Icon, label, badge, route }) => {
-  const router = useRouter();
-  
-  return (
-    <div 
-      onClick={() => route && router.push(route)}
-      className="flex items-center justify-between px-5 py-3.5 rounded-xl transition-all duration-200 cursor-pointer text-gray-600 hover:bg-gray-50/80 hover:text-gray-900"
-    >
-      <div className="flex items-center space-x-3.5">
-        <Icon className="w-5 h-5 text-gray-500" />
-        <span className="font-medium">{label}</span>
-      </div>
-      {badge && (
-        <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] text-center">
-          {badge}
-        </span>
-      )}
-    </div>
-  );
-};
 
 const AdminDashboard = () => {
   const router = useRouter();
@@ -188,18 +162,13 @@ const AdminDashboard = () => {
     { disease: 'Migraine', count: 98, trend: 'down' }
   ];
 
-  const handleLogout = () => {
-    ['token', 'role', 'isLoggedIn'].forEach(key => localStorage.removeItem(key));
-    router.push('/auth/admin/login');
-  };
-
   if (loading) {
     return <LoadingScreen message="Loading admin dashboard..." />;
   }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
-      <Sidebar analytics={analytics} handleLogout={handleLogout} />
+      <Sidebar pendingApprovals={analytics.pendingApprovals} />
       
       <div className="flex-1 overflow-auto ml-72">
         <Header 
@@ -237,133 +206,7 @@ const AdminDashboard = () => {
   );
 };
 
-const Sidebar: React.FC<{ 
-  analytics: AnalyticsData; 
-  handleLogout: () => void 
-}> = ({ analytics, handleLogout }) => (
-  <div className="w-72 bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col fixed left-0 top-0 h-full z-20 shadow-lg shadow-purple-500/5">
-    <div className="p-8 pb-6">
-      <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-          <Shield className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">HealthMate</span>
-          <p className="text-xs text-gray-500 mt-1">Admin Portal</p>
-        </div>
-      </div>
-    </div>
-
-    <nav className="px-5 space-y-2 flex-1">
-      <ActiveNavItem icon={BarChart3} label="Dashboard" />
-      <NavItem icon={Stethoscope} label="Doctors" badge={analytics.pendingApprovals} route="/admin/doctors" />
-      <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
-      <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
-      <NavItem icon={CreditCard} label="Billing" route="/admin/billing" />
-    </nav>
-
-    <div className="p-5 space-y-2 border-t border-gray-200/50">
-      <NavItem icon={HelpCircle} label="Help & Support" route="/admin/help" />
-      <div onClick={handleLogout} className="w-full"><NavItem icon={LogOut} label="Logout" /></div>
-    </div>
-
-    <div className="p-5 mt-auto">
-      <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200/50">
-        <p className="text-sm font-medium text-purple-800">System Status</p>
-        <div className="flex items-center space-x-2 mt-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <p className="text-xs text-purple-600/80">All systems operational</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const ActiveNavItem: React.FC<{ icon: React.ElementType; label: string }> = ({ icon: Icon, label }) => (
-  <div className="flex items-center justify-between px-5 py-3.5 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50 cursor-pointer">
-    <div className="flex items-center space-x-3.5">
-      <Icon className="w-5 h-5 text-purple-600" />
-      <span className="font-medium">{label}</span>
-    </div>
-  </div>
-);
-
-const Header: React.FC<{
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  selectedTimeRange: 'week' | 'month' | 'year';
-  setSelectedTimeRange: (range: 'week' | 'month' | 'year') => void;
-  adminData: AdminData | null;
-}> = ({ searchQuery, setSearchQuery, selectedTimeRange, setSelectedTimeRange, adminData }) => (
-  <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <TimeRangeSelector selectedTimeRange={selectedTimeRange} setSelectedTimeRange={setSelectedTimeRange} />
-      </div>
-      <div className="flex items-center space-x-5">
-        <BellButton />
-        <AdminProfile adminData={adminData} />
-      </div>
-    </div>
-  </div>
-);
-
-const SearchBar: React.FC<{ 
-  searchQuery: string; 
-  setSearchQuery: (query: string) => void 
-}> = ({ searchQuery, setSearchQuery }) => (
-  <div className="relative flex-1 max-w-lg">
-    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-    <input
-      type="text"
-      placeholder="Search analytics, reports..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200"
-    />
-  </div>
-);
-
-const TimeRangeSelector: React.FC<{
-  selectedTimeRange: 'week' | 'month' | 'year';
-  setSelectedTimeRange: (range: 'week' | 'month' | 'year') => void;
-}> = ({ selectedTimeRange, setSelectedTimeRange }) => (
-  <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-xl p-1">
-    {(['week', 'month', 'year'] as const).map((range) => (
-      <button
-        key={range}
-        onClick={() => setSelectedTimeRange(range)}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-          selectedTimeRange === range
-            ? 'bg-purple-600 text-white'
-            : 'text-gray-600 hover:bg-gray-50'
-        }`}
-      >
-        {range.charAt(0).toUpperCase() + range.slice(1)}
-      </button>
-    ))}
-  </div>
-);
-
-const BellButton: React.FC = () => (
-  <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
-    <Bell className="w-5 h-5 text-gray-600" />
-    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-  </button>
-);
-
-const AdminProfile: React.FC<{ adminData: AdminData | null }> = ({ adminData }) => (
-  <div className="flex items-center space-x-3">
-    <div className="text-right">
-      <p className="text-sm font-medium text-gray-800">{adminData?.name || 'Admin'}</p>
-      <p className="text-xs text-gray-500">System Administrator</p>
-    </div>
-    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-      {adminData?.name?.charAt(0) || 'A'}
-    </div>
-  </div>
-);
+// Remaining components (ActionButton, StatsGrid, ChartContainer, etc.) stay exactly the same...
 
 const ActionButton: React.FC<{ 
   icon: React.ElementType; 

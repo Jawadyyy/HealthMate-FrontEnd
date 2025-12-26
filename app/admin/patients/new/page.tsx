@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { 
   User, UserPlus, ArrowLeft, Save, X, Plus, Trash2,
   Mail, Phone, MapPin, Calendar, Activity, AlertCircle,
-  Shield, LogOut, HelpCircle, BarChart3, Stethoscope, 
-  CreditCard, Bell, ChevronDown, CheckCircle, XCircle
+  CreditCard, Bell
 } from 'lucide-react';
 import api from '@/lib/api/api';
 import { useRouter } from 'next/navigation';
+import Sidebar from '../../components/Sidebar';
+import Header from '../../components/Header';
 
 // ========== TYPES ==========
 interface PatientFormData {
@@ -43,6 +44,8 @@ const AddPatientModule = () => {
   const [newCondition, setNewCondition] = useState('');
   const [newAllergy, setNewAllergy] = useState('');
   const [newMedication, setNewMedication] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
 
   const [formData, setFormData] = useState<PatientFormData>({
     name: '',
@@ -176,22 +179,23 @@ const AddPatientModule = () => {
     }
   };
 
-  const handleLogout = () => {
-    ['token', 'role', 'isLoggedIn'].forEach(key => localStorage.removeItem(key));
-    router.push('/auth/admin/login');
-  };
-
   const getError = (field: keyof PatientFormData) => {
     return errors.find(error => error.field === field);
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
-      <Sidebar handleLogout={handleLogout} />
-
+     <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
+      {/* Update Sidebar usage - let it auto-detect route from usePathname */}
+      <Sidebar />
+      
       <div className="flex-1 overflow-auto ml-72">
-        <Header />
-
+        <Header 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          adminData={{ name: 'System Admin' }}
+          searchPlaceholder="Search..."
+        />
+        
         {/* Breadcrumb & Actions */}
         <div className="px-8 py-5">
           <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
@@ -702,118 +706,5 @@ const AddPatientModule = () => {
     </div>
   );
 };
-
-// ========== SIDEBAR COMPONENT ==========
-const Sidebar: React.FC<{ handleLogout: () => void }> = ({ handleLogout }) => (
-  <div className="w-72 bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col fixed left-0 top-0 h-full z-20 shadow-lg shadow-purple-500/5">
-    <div className="p-8 pb-6">
-      <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-          <Shield className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">HealthMate</span>
-          <p className="text-xs text-gray-500 mt-1">Admin Portal</p>
-        </div>
-      </div>
-    </div>
-
-    <nav className="px-5 space-y-2 flex-1">
-      <NavItem icon={BarChart3} label="Dashboard" route="/admin/dashboard" />
-      <NavItem icon={Stethoscope} label="Doctors" route="/admin/doctors" />
-      <NavItem icon={UserPlus} label="Patients" route="/admin/patients" />
-      <ActiveNavItem icon={User} label="Add Patient" />
-      <NavItem icon={Calendar} label="Appointments" route="/admin/appointments" />
-      <NavItem icon={CreditCard} label="Billing" route="/admin/billing" />
-    </nav>
-
-    <div className="p-5 space-y-2 border-t border-gray-200/50">
-      <NavItem icon={HelpCircle} label="Help & Support" route="/admin/help" />
-      <div onClick={handleLogout} className="w-full"><NavItem icon={LogOut} label="Logout" /></div>
-    </div>
-
-    <div className="p-5 mt-auto">
-      <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200/50">
-        <p className="text-sm font-medium text-purple-800">System Status</p>
-        <div className="flex items-center space-x-2 mt-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <p className="text-xs text-purple-600/80">All systems operational</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const NavItem: React.FC<{ 
-  icon: React.ElementType; 
-  label: string; 
-  route?: string;
-}> = ({ icon: Icon, label, route }) => {
-  const router = useRouter();
-  
-  return (
-    <div 
-      onClick={() => route && router.push(route)}
-      className={`flex items-center justify-between px-5 py-3.5 rounded-xl transition-all duration-200 cursor-pointer ${
-        label === 'Add Patient' 
-          ? 'bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50'
-          : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900'
-      }`}
-    >
-      <div className="flex items-center space-x-3.5">
-        <Icon className={`w-5 h-5 ${label === 'Add Patient' ? 'text-purple-600' : 'text-gray-500'}`} />
-        <span className="font-medium">{label}</span>
-      </div>
-    </div>
-  );
-};
-
-const ActiveNavItem: React.FC<{ icon: React.ElementType; label: string }> = ({ icon: Icon, label }) => (
-  <div className="flex items-center justify-between px-5 py-3.5 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-700 border border-purple-200/50 cursor-pointer">
-    <div className="flex items-center space-x-3.5">
-      <Icon className="w-5 h-5 text-purple-600" />
-      <span className="font-medium">{label}</span>
-    </div>
-  </div>
-);
-
-// ========== HEADER COMPONENT ==========
-const Header: React.FC = () => (
-  <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        <div className="relative flex-1 max-w-lg">
-          <Bell className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <div className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl">
-            <p className="text-gray-600">Add New Patient Form</p>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center space-x-5">
-        <BellButton />
-        <AdminProfile />
-      </div>
-    </div>
-  </div>
-);
-
-const BellButton: React.FC = () => (
-  <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
-    <Bell className="w-5 h-5 text-gray-600" />
-    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-  </button>
-);
-
-const AdminProfile: React.FC = () => (
-  <div className="flex items-center space-x-3">
-    <div className="text-right">
-      <p className="text-sm font-medium text-gray-800">Admin User</p>
-      <p className="text-xs text-gray-500">System Administrator</p>
-    </div>
-    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-      A
-    </div>
-  </div>
-);
 
 export default AddPatientModule;
