@@ -79,22 +79,9 @@ const DoctorSidebar = () => {
                 
             </nav>
 
-            <div className="p-5 space-y-2 border-t border-gray-200/50">
-                <NavItem icon={HelpCircle} label="Help & Support" />
-                <div onClick={handleLogout} className="w-full">
-                    <NavItem icon={LogOut} label="Logout" />
-                </div>
-            </div>
+            
 
-            <div className="p-5 mt-auto">
-                <div className="bg-gradient-to-r from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200/50">
-                    <p className="text-sm font-medium text-green-800">Need assistance?</p>
-                    <p className="text-xs text-green-600/80 mt-1">Our support team is here to help</p>
-                    <button className="mt-3 w-full bg-white text-green-600 text-sm font-medium py-2 rounded-lg border border-green-200 hover:bg-green-50 transition-all duration-200 cursor-pointer">
-                        Contact Support
-                    </button>
-                </div>
-            </div>
+            
         </div>
     );
 };
