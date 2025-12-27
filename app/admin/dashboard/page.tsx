@@ -37,6 +37,27 @@ interface AnalyticsData {
   diseaseTrends?: { disease: string; count: number; trend: 'up' | 'down' }[];
 }
 
+interface PatientTrendData {
+  month: string;
+  appointments: number;
+  revenue: number;
+  adherence?: number;
+}
+
+interface DoctorStats {
+  _id: string;
+  name: string;
+  specialization: string;
+  appointmentCount: number;
+  revenue: number;
+}
+
+interface DiseaseTrend {
+  disease: string;
+  count: number;
+  trend: 'up' | 'down';
+}
+
 const COLORS = ['#7c3aed', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 const AdminDashboard = () => {
@@ -85,30 +106,74 @@ const AdminDashboard = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const [patientsRes, doctorsRes, appointmentsRes, revenueRes, topDoctorsRes, diseaseTrendsRes] = await Promise.all([
+      // Fetch basic analytics
+      const [patientsRes, doctorsRes, appointmentsRes, revenueRes] = await Promise.all([
         api.get('/analytics/total-patients'),
         api.get('/analytics/total-doctors'),
         api.get('/analytics/appointments'),
-        api.get('/analytics/revenue'),
-        api.get('/analytics/top-doctors'),
-        api.get('/analytics/disease-trends')
+        api.get('/analytics/revenue')
       ]);
 
+      // Fetch additional analytics data
+      let topDoctorsData = getMockTopDoctors();
+      let diseaseTrendsData = getMockDiseaseTrends();
+      let appointmentsByDateData = getMockAppointmentsByDate();
+      let revenueByMonthData = getMockRevenueByMonth();
+      let patientGrowthData = getMockPatientGrowth();
+
+      try {
+        const [topDoctorsRes, diseaseTrendsRes] = await Promise.all([
+          api.get('/analytics/top-doctors'),
+          api.get('/analytics/disease-trends')
+        ]);
+
+        if (topDoctorsRes.data && Array.isArray(topDoctorsRes.data)) {
+          topDoctorsData = topDoctorsRes.data.map((doctor: any) => ({
+            name: doctor.name || `Dr. ${doctor._id?.substring(0, 8)}`,
+            specialization: doctor.specialization || 'General',
+            appointments: doctor.appointmentCount || 0,
+            revenue: doctor.revenue || 0
+          }));
+        }
+
+        if (diseaseTrendsRes.data && Array.isArray(diseaseTrendsRes.data)) {
+          diseaseTrendsData = diseaseTrendsRes.data.map((disease: any) => ({
+            disease: disease.disease || 'Unknown',
+            count: disease.count || 0,
+            trend: disease.trend || 'up'
+          }));
+        }
+      } catch (e) {
+        console.log("Using mock data for some analytics endpoints");
+      }
+
+      // Calculate active appointments and pending approvals from real data if available
+      const activeAppointments = appointmentsRes.data?.active || 
+                                appointmentsRes.data?.current || 
+                                appointmentsRes.data?.today || 
+                                45;
+      
+      const pendingApprovals = doctorsRes.data?.pending || 
+                              doctorsRes.data?.unapproved || 
+                              12;
+
       setAnalytics({
-        totalPatients: patientsRes.data.total || 1250,
-        totalDoctors: doctorsRes.data.total || 85,
-        totalAppointments: appointmentsRes.data.total || 320,
-        totalRevenue: revenueRes.data.total || 45600,
-        pendingApprovals: doctorsRes.data.pending || 12,
-        activeAppointments: appointmentsRes.data.active || 45,
-        appointmentsByDate: getMockAppointmentsByDate(),
-        revenueByMonth: getMockRevenueByMonth(),
-        patientGrowth: getMockPatientGrowth(),
-        topDoctors: topDoctorsRes.data || getMockTopDoctors(),
-        diseaseTrends: diseaseTrendsRes.data || getMockDiseaseTrends()
+        totalPatients: patientsRes.data?.total || patientsRes.data?.count || 0,
+        totalDoctors: doctorsRes.data?.total || doctorsRes.data?.count || 0,
+        totalAppointments: appointmentsRes.data?.total || appointmentsRes.data?.count || 0,
+        totalRevenue: revenueRes.data?.total || revenueRes.data?.amount || 0,
+        pendingApprovals,
+        activeAppointments,
+        appointmentsByDate: appointmentsByDateData,
+        revenueByMonth: revenueByMonthData,
+        patientGrowth: patientGrowthData,
+        topDoctors: topDoctorsData,
+        diseaseTrends: diseaseTrendsData
       });
-    } catch (e) {
-      console.log("Using mock analytics data");
+
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      // Fallback to mock data if API calls fail
       setAnalytics(getMockAnalytics());
     }
   };
@@ -162,6 +227,60 @@ const AdminDashboard = () => {
     { disease: 'Migraine', count: 98, trend: 'down' }
   ];
 
+  // Helper function to export analytics data
+  const handleExportReport = async () => {
+    try {
+      const response = await api.get('/analytics/appointments', {
+        params: { format: 'csv', timeframe: selectedTimeRange }
+      });
+      
+      // Create a blob and download link for the CSV
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `healthmate-analytics-${selectedTimeRange}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      alert('Failed to export report. Please try again.');
+    }
+  };
+
+  // Helper function to generate custom report
+  const handleGenerateReport = async () => {
+    try {
+      const reportData = {
+        timeframe: selectedTimeRange,
+        metrics: ['patients', 'doctors', 'appointments', 'revenue'],
+        includeCharts: true
+      };
+
+      const response = await api.post('/analytics/appointments', reportData, {
+        responseType: 'blob'
+      });
+
+      // Create PDF download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `healthmate-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('Failed to generate report. Please try again.');
+    }
+  };
+
   if (loading) {
     return <LoadingScreen message="Loading admin dashboard..." />;
   }
@@ -187,11 +306,16 @@ const AdminDashboard = () => {
             </span>
           </div>
           <div className="flex items-center space-x-3">
-            <ActionButton icon={Download} label="Export Report" />
+            <ActionButton 
+              icon={Download} 
+              label="Export Report" 
+              onClick={handleExportReport}
+            />
             <ActionButton 
               icon={Plus} 
               label="Generate Report" 
               primary 
+              onClick={handleGenerateReport}
               className="bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30"
             />
           </div>
@@ -206,19 +330,21 @@ const AdminDashboard = () => {
   );
 };
 
-// Remaining components (ActionButton, StatsGrid, ChartContainer, etc.) stay exactly the same...
-
 const ActionButton: React.FC<{ 
   icon: React.ElementType; 
   label: string; 
   primary?: boolean;
   className?: string;
-}> = ({ icon: Icon, label, primary, className = '' }) => (
-  <button className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-    primary 
-      ? `bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 shadow-lg shadow-purple-500/30 ${className}`
-      : 'text-gray-600 hover:bg-gray-50 border border-gray-200'
-  }`}>
+  onClick?: () => void;
+}> = ({ icon: Icon, label, primary, className = '', onClick }) => (
+  <button 
+    onClick={onClick}
+    className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+      primary 
+        ? `bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 shadow-lg shadow-purple-500/30 ${className}`
+        : 'text-gray-600 hover:bg-gray-50 border border-gray-200'
+    }`}
+  >
     <Icon className="w-4 h-4" />
     <span className="text-sm font-medium">{label}</span>
   </button>

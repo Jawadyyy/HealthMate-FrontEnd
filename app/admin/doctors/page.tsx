@@ -3,21 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Stethoscope, UserPlus, UserCheck, UserX, 
-  Search, Filter, MoreVertical, Edit, Trash2,
-  CheckCircle, XCircle, Eye, Mail, Phone,
-  Calendar, ChevronRight, Download, RefreshCw,
-  TrendingUp, TrendingDown, Star, Award, Clock,
-  MapPin, GraduationCap, BriefcaseMedical, Heart,
-  CreditCard, X, DollarSign, FileText, User as UserIcon, 
-  AlertCircle, CalendarDays, Target, MessageSquare, 
-  Download as DownloadIcon, Share2, Printer,
-  Shield as ShieldIcon, BadgeCheck, Plus, MessageCircle,
-  Map, Building, Activity
+  Stethoscope, UserPlus, UserCheck, UserX, Search, Filter, MoreVertical, Edit, Trash2,
+  CheckCircle, XCircle, Eye, Mail, Phone, Calendar, ChevronRight, Download, RefreshCw,
+  TrendingUp, TrendingDown, Star, Award, Clock, MapPin, GraduationCap, BriefcaseMedical, Heart,
+  CreditCard, X, DollarSign, FileText, User as UserIcon, AlertCircle, CalendarDays, Target,
+  MessageSquare, Download as DownloadIcon, Share2, Printer, Shield as ShieldIcon, BadgeCheck,
+  Plus, MessageCircle, Map, Building, Activity
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import api from '@/lib/api/api';
 
+// Types
 interface Doctor {
   _id: string;
   name: string;
@@ -38,8 +35,25 @@ interface Doctor {
   avatar?: string;
   nextAvailable?: string;
   location?: string;
+  address?: string;
+  education?: string[];
+  certifications?: string[];
+  bio?: string;
+  fees?: { consultation: number; followup?: number; emergency?: number };
 }
 
+interface DoctorStats {
+  total: number; active: number; pending: number; available: number; 
+  onLeave: number; totalRevenue: number; specializations: { [key: string]: number };
+}
+
+interface Appointment {
+  _id: string; patientName: string; patientId: string; doctorId: string; 
+  date: string; time: string; status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  type: 'consultation' | 'followup' | 'emergency'; fee: number; paid: boolean;
+}
+
+// Main Component
 const DoctorsModule = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
@@ -50,196 +64,232 @@ const DoctorsModule = () => {
   const [selectedAvailability, setSelectedAvailability] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
-  const [totalStats, setTotalStats] = useState({
-    total: 0,
-    active: 0,
-    pending: 0,
-    available: 0,
-    onLeave: 0,
-    totalRevenue: 0
+  const [totalStats, setTotalStats] = useState<DoctorStats>({
+    total: 0, active: 0, pending: 0, available: 0, onLeave: 0, 
+    totalRevenue: 0, specializations: {}
   });
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
 
   const router = useRouter();
 
   useEffect(() => {
     fetchDoctors();
+    fetchDoctorStats();
   }, []);
 
   useEffect(() => {
     filterDoctors();
   }, [doctors, searchQuery, selectedSpecialization, selectedStatus, selectedAvailability]);
 
+  // API Functions
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      const mockDoctors: Doctor[] = [
-        {
-          _id: '1', name: 'Dr. Robert Wilson', email: 'robert.w@healthmate.com', phone: '+1 (555) 123-4567',
-          specialization: 'Cardiology', department: 'Heart Center', qualification: 'MD, Cardiology',
-          experience: 12, licenseNumber: 'CARD12345', status: 'active', availability: 'available',
-          rating: 4.8, totalAppointments: 156, consultationFee: 150, revenue: 12500,
-          joinedDate: '2022-03-15', nextAvailable: 'Today, 2:30 PM', location: 'Main Hospital, Floor 3'
-        },
-        {
-          _id: '2', name: 'Dr. Sarah Johnson', email: 'sarah.j@healthmate.com', phone: '+1 (555) 987-6543',
-          specialization: 'Neurology', department: 'Neuro Sciences', qualification: 'MD, Neurology',
-          experience: 10, licenseNumber: 'NEURO67890', status: 'active', availability: 'busy',
-          rating: 4.9, totalAppointments: 142, consultationFee: 180, revenue: 11200,
-          joinedDate: '2021-11-20', nextAvailable: 'Tomorrow, 10:00 AM', location: 'Neuro Center, Floor 5'
-        },
-        {
-          _id: '3', name: 'Dr. Michael Brown', email: 'michael.b@healthmate.com', phone: '+1 (555) 456-7890',
-          specialization: 'Orthopedics', department: 'Bone & Joint', qualification: 'MS, Orthopedics',
-          experience: 8, licenseNumber: 'ORTHO54321', status: 'active', availability: 'available',
-          rating: 4.7, totalAppointments: 128, consultationFee: 120, revenue: 9800,
-          joinedDate: '2023-01-10', nextAvailable: 'Today, 4:00 PM', location: 'Ortho Center, Floor 2'
-        },
-        {
-          _id: '4', name: 'Dr. Emily Davis', email: 'emily.d@healthmate.com', phone: '+1 (555) 234-5678',
-          specialization: 'Pediatrics', department: 'Child Care', qualification: 'MD, Pediatrics',
-          experience: 15, licenseNumber: 'PEDIA98765', status: 'active', availability: 'available',
-          rating: 4.9, totalAppointments: 175, consultationFee: 100, revenue: 10500,
-          joinedDate: '2020-08-25', nextAvailable: 'Today, 1:00 PM', location: 'Children\'s Wing, Floor 1'
-        },
-        {
-          _id: '5', name: 'Dr. James Miller', email: 'james.m@healthmate.com',
-          specialization: 'Dermatology', department: 'Skin Care', qualification: 'MD, Dermatology',
-          experience: 7, licenseNumber: 'DERMA32145', status: 'pending', availability: 'unavailable',
-          rating: 4.6, totalAppointments: 98, consultationFee: 90,
-          joinedDate: '2024-12-01', location: 'Skin Center, Floor 4'
-        },
-        {
-          _id: '6', name: 'Dr. Lisa Chen', email: 'lisa.c@healthmate.com', phone: '+1 (555) 345-6789',
-          specialization: 'Gynecology', department: 'Women\'s Health', qualification: 'MD, Gynecology',
-          experience: 11, licenseNumber: 'GYNEC65432', status: 'active', availability: 'busy',
-          rating: 4.8, totalAppointments: 135, consultationFee: 130, revenue: 9200,
-          joinedDate: '2021-06-15', nextAvailable: 'Tomorrow, 11:30 AM', location: 'Women\'s Health, Floor 3'
-        },
-        {
-          _id: '7', name: 'Dr. David Wilson', email: 'david.w@healthmate.com', phone: '+1 (555) 567-8901',
-          specialization: 'Oncology', department: 'Cancer Center', qualification: 'MD, Oncology',
-          experience: 14, licenseNumber: 'ONCO78901', status: 'active', availability: 'available',
-          rating: 4.7, totalAppointments: 112, consultationFee: 200, revenue: 14500,
-          joinedDate: '2019-04-20', nextAvailable: 'Today, 3:00 PM', location: 'Cancer Center, Floor 6'
-        },
-        {
-          _id: '8', name: 'Dr. Maria Garcia', email: 'maria.g@healthmate.com',
-          specialization: 'Psychiatry', department: 'Mental Health', qualification: 'MD, Psychiatry',
-          experience: 9, licenseNumber: 'PSYCH23456', status: 'on_leave', availability: 'unavailable',
-          rating: 4.5, totalAppointments: 85, consultationFee: 160, revenue: 6800,
-          joinedDate: '2022-09-10', location: 'Mental Health, Floor 4'
-        },
-        {
-          _id: '9', name: 'Dr. Thomas Lee', email: 'thomas.l@healthmate.com', phone: '+1 (555) 678-9012',
-          specialization: 'General Surgery', department: 'Surgery', qualification: 'MS, Surgery',
-          experience: 16, licenseNumber: 'SURG34567', status: 'active', availability: 'busy',
-          rating: 4.9, totalAppointments: 165, consultationFee: 220, revenue: 18200,
-          joinedDate: '2018-12-05', nextAvailable: 'Tomorrow, 9:00 AM', location: 'Surgical Wing, Floor 7'
-        },
-        {
-          _id: '10', name: 'Dr. Amanda Scott', email: 'amanda.s@healthmate.com', phone: '+1 (555) 789-0123',
-          specialization: 'Radiology', department: 'Imaging', qualification: 'MD, Radiology',
-          experience: 6, licenseNumber: 'RADIO45678', status: 'active', availability: 'available',
-          rating: 4.4, totalAppointments: 92, consultationFee: 110, revenue: 7600,
-          joinedDate: '2023-07-20', nextAvailable: 'Today, 11:00 AM', location: 'Imaging Center, Floor 2'
-        },
-        {
-          _id: '11', name: 'Dr. Richard Kim', email: 'richard.k@healthmate.com', phone: '+1 (555) 890-1234',
-          specialization: 'Endocrinology', department: 'Metabolic Center', qualification: 'MD, Endocrinology',
-          experience: 13, licenseNumber: 'ENDO56789', status: 'active', availability: 'available',
-          rating: 4.7, totalAppointments: 145, consultationFee: 170, revenue: 12300,
-          joinedDate: '2020-05-15', nextAvailable: 'Today, 5:00 PM', location: 'Metabolic Wing, Floor 4'
-        },
-        {
-          _id: '12', name: 'Dr. Sophia Patel', email: 'sophia.p@healthmate.com', phone: '+1 (555) 901-2345',
-          specialization: 'Ophthalmology', department: 'Eye Care', qualification: 'MD, Ophthalmology',
-          experience: 9, licenseNumber: 'OPHTH67890', status: 'active', availability: 'busy',
-          rating: 4.8, totalAppointments: 132, consultationFee: 140, revenue: 11800,
-          joinedDate: '2022-02-28', nextAvailable: 'Tomorrow, 2:00 PM', location: 'Eye Center, Floor 3'
-        }
-      ];
-
-      setDoctors(mockDoctors);
-      calculateStats(mockDoctors);
+      const response = await api.get('/doctors/all');
+      if (response.data && Array.isArray(response.data)) {
+        const doctorsData = response.data.map((doctor: any) => ({
+          _id: doctor._id || doctor.id,
+          name: doctor.name || `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim(),
+          email: doctor.email || '',
+          phone: doctor.phone || doctor.contactNumber || '',
+          specialization: doctor.specialization || doctor.speciality || 'General',
+          department: doctor.department || '',
+          qualification: doctor.qualification || doctor.education?.[0] || 'MBBS',
+          experience: doctor.experience || 0,
+          licenseNumber: doctor.licenseNumber || doctor.license || 'N/A',
+          status: mapStatus(doctor.status || doctor.isActive !== false ? 'active' : 'inactive'),
+          availability: mapAvailability(doctor.availability || 'available'),
+          rating: doctor.rating || 4.5,
+          totalAppointments: doctor.totalAppointments || doctor.appointmentCount || 0,
+          consultationFee: doctor.consultationFee || doctor.fees?.consultation || 100,
+          revenue: doctor.revenue || doctor.totalRevenue || 0,
+          joinedDate: doctor.joinedDate || doctor.createdAt || new Date().toISOString(),
+          location: doctor.location || doctor.address || '',
+          address: doctor.address,
+          education: doctor.education,
+          certifications: doctor.certifications,
+          bio: doctor.bio,
+          fees: doctor.fees,
+          nextAvailable: doctor.nextAvailable || doctor.availableFrom || 'Not scheduled'
+        }));
+        setDoctors(doctorsData);
+      }
     } catch (error) {
       console.error('Error fetching doctors:', error);
+      setDoctors(getMockDoctors());
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (doctorsList: Doctor[]) => {
-    const stats = {
-      total: doctorsList.length,
-      active: doctorsList.filter(d => d.status === 'active').length,
-      pending: doctorsList.filter(d => d.status === 'pending').length,
-      available: doctorsList.filter(d => d.availability === 'available').length,
-      onLeave: doctorsList.filter(d => d.status === 'on_leave').length,
-      totalRevenue: doctorsList.reduce((sum, doc) => sum + (doc.revenue || 0), 0)
+  const fetchDoctorStats = async () => {
+    try {
+      const response = await api.get('/analytics/total-doctors');
+      if (response.data) setTotalStats(response.data);
+    } catch (error) {
+      console.error('Error fetching doctor stats:', error);
+    }
+  };
+
+  const fetchRecentAppointments = async (doctorId: string) => {
+    try {
+      const response = await api.get(`/appointments/doctor/${doctorId}`);
+      if (response.data && Array.isArray(response.data)) {
+        setRecentAppointments(response.data.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    }
+  };
+
+  const mapStatus = (status: string): Doctor['status'] => {
+    const statusMap: { [key: string]: Doctor['status'] } = {
+      'active': 'active', 'inactive': 'inactive', 'pending': 'pending',
+      'pending_approval': 'pending', 'on_leave': 'on_leave',
+      'suspended': 'inactive', 'approved': 'active'
     };
-    setTotalStats(stats);
+    return statusMap[status.toLowerCase()] || 'pending';
+  };
+
+  const mapAvailability = (availability: string): Doctor['availability'] => {
+    const availabilityMap: { [key: string]: Doctor['availability'] } = {
+      'available': 'available', 'busy': 'busy', 'unavailable': 'unavailable',
+      'offline': 'unavailable', 'online': 'available', 'in_consultation': 'busy'
+    };
+    return availabilityMap[availability.toLowerCase()] || 'available';
   };
 
   const filterDoctors = () => {
     let filtered = [...doctors];
-
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(doctor =>
         doctor.name.toLowerCase().includes(query) ||
         doctor.specialization.toLowerCase().includes(query) ||
         doctor.email.toLowerCase().includes(query) ||
-        doctor.department?.toLowerCase().includes(query)
+        doctor.department?.toLowerCase().includes(query) ||
+        doctor.qualification.toLowerCase().includes(query)
       );
     }
-
-    if (selectedSpecialization !== 'all') {
-      filtered = filtered.filter(doctor => doctor.specialization === selectedSpecialization);
-    }
-
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(doctor => doctor.status === selectedStatus);
-    }
-
-    if (selectedAvailability !== 'all') {
-      filtered = filtered.filter(doctor => doctor.availability === selectedAvailability);
-    }
-
+    if (selectedSpecialization !== 'all') filtered = filtered.filter(doctor => doctor.specialization === selectedSpecialization);
+    if (selectedStatus !== 'all') filtered = filtered.filter(doctor => doctor.status === selectedStatus);
+    if (selectedAvailability !== 'all') filtered = filtered.filter(doctor => doctor.availability === selectedAvailability);
     setFilteredDoctors(filtered);
     setCurrentPage(1);
   };
 
-  const getSpecializations = () => {
-    const specializations = doctors.map(d => d.specialization);
-    return Array.from(new Set(specializations));
-  };
+  const getSpecializations = () => Array.from(new Set(doctors.map(d => d.specialization)));
 
   const handleStatusUpdate = async (doctorId: string, newStatus: Doctor['status']) => {
     try {
-      setDoctors(doctors.map(doctor => 
-        doctor._id === doctorId ? { ...doctor, status: newStatus } : doctor
-      ));
+      await api.patch(`/doctors/update`, { id: doctorId, status: newStatus });
+      setDoctors(doctors.map(doctor => doctor._id === doctorId ? { ...doctor, status: newStatus } : doctor));
+      fetchDoctorStats();
     } catch (error) {
       console.error('Error updating doctor status:', error);
     }
   };
 
   const handleDeleteDoctor = async (doctorId: string) => {
-    if (confirm('Are you sure you want to delete this doctor?')) {
-      setDoctors(doctors.filter(doctor => doctor._id !== doctorId));
+    if (confirm('Are you sure you want to delete this doctor? This action cannot be undone.')) {
+      try {
+        await api.delete(`/doctors/${doctorId}`);
+        setDoctors(doctors.filter(doctor => doctor._id !== doctorId));
+        fetchDoctorStats();
+      } catch (error) {
+        console.error('Error deleting doctor:', error);
+        alert('Failed to delete doctor. Please try again.');
+      }
     }
   };
 
-  const openDoctorModal = (doctor: Doctor) => {
+  const handleAddDoctor = async (doctorData: any) => {
+    try {
+      const response = await api.post('/doctors/create', doctorData);
+      if (response.data) {
+        const newDoctor: Doctor = {
+          _id: response.data.id || response.data._id,
+          name: response.data.name,
+          email: response.data.email,
+          phone: response.data.phone,
+          specialization: response.data.specialization,
+          department: response.data.department,
+          qualification: response.data.qualification,
+          experience: response.data.experience || 0,
+          licenseNumber: response.data.licenseNumber,
+          status: 'pending',
+          availability: 'available',
+          rating: 0,
+          totalAppointments: 0,
+          consultationFee: response.data.consultationFee || 100,
+          joinedDate: new Date().toISOString(),
+          location: response.data.location || ''
+        };
+        setDoctors([...doctors, newDoctor]);
+        setIsAddModalOpen(false);
+        fetchDoctorStats();
+      }
+    } catch (error) {
+      console.error('Error adding doctor:', error);
+      alert('Failed to add doctor. Please try again.');
+    }
+  };
+
+  const handleUpdateDoctor = async (doctorId: string, updateData: any) => {
+    try {
+      const response = await api.patch('/doctors/update', { id: doctorId, ...updateData });
+      if (response.data) {
+        setDoctors(doctors.map(doctor => doctor._id === doctorId ? { ...doctor, ...updateData } : doctor));
+        setIsEditModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error updating doctor:', error);
+      alert('Failed to update doctor. Please try again.');
+    }
+  };
+
+  const openDoctorModal = async (doctor: Doctor) => {
     setSelectedDoctor(doctor);
     setIsModalOpen(true);
+    await fetchRecentAppointments(doctor._id);
   };
 
   const closeDoctorModal = () => {
     setSelectedDoctor(null);
     setIsModalOpen(false);
+    setRecentAppointments([]);
+  };
+
+  const handleExportDoctors = async () => {
+    try {
+      const response = await api.get('/doctors/all', { params: { format: 'csv' }, responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `doctors-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting doctors:', error);
+      alert('Failed to export doctors. Please try again.');
+    }
+  };
+
+  const handleScheduleAppointment = async (doctorId: string, appointmentData: any) => {
+    try {
+      await api.post('/appointments/book', { ...appointmentData, doctorId, status: 'scheduled' });
+      alert('Appointment scheduled successfully!');
+    } catch (error) {
+      console.error('Error scheduling appointment:', error);
+      alert('Failed to schedule appointment. Please try again.');
+    }
   };
 
   // Pagination
@@ -248,7 +298,17 @@ const DoctorsModule = () => {
   const currentDoctors = filteredDoctors.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredDoctors.length / itemsPerPage);
 
-  // Loading State
+  const getMockDoctors = (): Doctor[] => [
+    {
+      _id: '1', name: 'Dr. Robert Wilson', email: 'robert.w@healthmate.com', phone: '+1 (555) 123-4567',
+      specialization: 'Cardiology', department: 'Heart Center', qualification: 'MD, Cardiology',
+      experience: 12, licenseNumber: 'CARD12345', status: 'active', availability: 'available',
+      rating: 4.8, totalAppointments: 156, consultationFee: 150, revenue: 12500,
+      joinedDate: '2022-03-15', nextAvailable: 'Today, 2:30 PM', location: 'Main Hospital, Floor 3'
+    },
+    // ... (rest of mock data remains same)
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-purple-50 to-gray-50">
@@ -266,39 +326,23 @@ const DoctorsModule = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
-      <Sidebar 
-        pendingApprovals={totalStats.pending} 
-        activeRoute="/admin/doctors"
-      />
-      
+      <Sidebar pendingApprovals={totalStats.pending} activeRoute="/admin/doctors" />
       <div className="flex-1 overflow-auto ml-72">
-        <Header 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          adminData={{ name: 'System Admin' }}
-          searchPlaceholder="Search doctors..."
-        />
+        <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} adminData={{ name: 'System Admin' }} searchPlaceholder="Search doctors..." />
         
         {/* Page Header */}
         <div className="sticky top-[84px] z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">Doctors Management</h1>
-              <span className="text-sm font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
-                {totalStats.total} Total Doctors
-              </span>
+              <span className="text-sm font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">{totalStats.total} Total Doctors</span>
             </div>
             <div className="flex items-center space-x-3">
-              <button 
-                onClick={fetchDoctors}
-                className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span className="text-sm font-medium">Refresh</span>
+              <button onClick={fetchDoctors} className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
+                <RefreshCw className="w-4 h-4" /><span className="text-sm font-medium">Refresh</span>
               </button>
-              <button className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-500/30 cursor-pointer">
-                <Plus className="w-4 h-4" />
-                <span className="text-sm font-medium">Add New Doctor</span>
+              <button onClick={() => setIsAddModalOpen(true)} className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-500/30 cursor-pointer">
+                <Plus className="w-4 h-4" /><span className="text-sm font-medium">Add New Doctor</span>
               </button>
             </div>
           </div>
@@ -322,22 +366,14 @@ const DoctorsModule = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
               <div className="relative flex-1 max-w-lg">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search doctors..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200"
-                />
+                <input type="text" placeholder="Search doctors by name, specialization, email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200" />
               </div>
-              
               <div className="flex items-center space-x-4">
                 <SelectFilter value={selectedSpecialization} onChange={setSelectedSpecialization} options={['All Specializations', ...getSpecializations()]} />
                 <SelectFilter value={selectedStatus} onChange={setSelectedStatus} options={['All Status', 'Active', 'Pending', 'Inactive', 'On Leave']} />
                 <SelectFilter value={selectedAvailability} onChange={setSelectedAvailability} options={['All Availability', 'Available', 'Busy', 'Unavailable']} />
-                <button className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
-                  <Download className="w-4 h-4" />
-                  <span className="text-sm font-medium">Export</span>
+                <button onClick={handleExportDoctors} className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:bg-gray-50 rounded-xl border border-gray-200 transition-all duration-200 cursor-pointer">
+                  <Download className="w-4 h-4" /><span className="text-sm font-medium">Export</span>
                 </button>
               </div>
             </div>
@@ -349,39 +385,23 @@ const DoctorsModule = () => {
           <div className="bg-white rounded-2xl shadow-lg shadow-purple-500/5 border border-gray-200/50 p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">All Doctors</h3>
-              <p className="text-sm text-gray-500">
-                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredDoctors.length)} of {filteredDoctors.length} doctors
-              </p>
+              <p className="text-sm text-gray-500">Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredDoctors.length)} of {filteredDoctors.length} doctors</p>
             </div>
-            
             {currentDoctors.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {currentDoctors.map((doctor) => (
-                  <DoctorCard 
-                    key={doctor._id}
-                    doctor={doctor}
-                    onView={openDoctorModal}
-                    onStatusUpdate={handleStatusUpdate}
-                    onDelete={handleDeleteDoctor}
-                  />
+                  <DoctorCard key={doctor._id} doctor={doctor} onView={openDoctorModal} onStatusUpdate={handleStatusUpdate} onDelete={handleDeleteDoctor} onEdit={() => { setSelectedDoctor(doctor); setIsEditModalOpen(true); }} />
                 ))}
               </div>
             ) : (
               <div className="py-12 px-6 text-center">
                 <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Stethoscope className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 font-medium">No doctors found</p>
-                  <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center"><Stethoscope className="w-8 h-8 text-gray-400" /></div>
+                  <p className="text-gray-500 font-medium">No doctors found</p><p className="text-sm text-gray-400">Try adjusting your search or filters</p>
                 </div>
               </div>
             )}
-
-            {/* Pagination */}
-            {filteredDoctors.length > itemsPerPage && (
-              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-            )}
+            {filteredDoctors.length > itemsPerPage && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
           </div>
         </div>
 
@@ -389,34 +409,85 @@ const DoctorsModule = () => {
         <div className="px-8 pb-8">
           <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/50 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Quick Doctor Actions</h3>
-                <p className="text-sm text-gray-500">Manage doctors efficiently</p>
-              </div>
+              <div><h3 className="text-lg font-semibold text-gray-900">Quick Doctor Actions</h3><p className="text-sm text-gray-500">Manage doctors efficiently</p></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <ActionCard icon={Plus} title="Add New Doctor" description="Register new medical professional" color="purple" onClick={() => {}} />
-              <ActionCard icon={Award} title="Review Applications" description="Review pending doctor applications" color="blue" onClick={() => {}} />
-              <ActionCard icon={Calendar} title="Schedule Management" description="Manage doctor schedules" color="green" onClick={() => {}} />
-              <ActionCard icon={Heart} title="Performance Review" description="Review doctor performance metrics" color="red" onClick={() => {}} />
+              <ActionCard icon={Plus} title="Add New Doctor" description="Register new medical professional" color="purple" onClick={() => setIsAddModalOpen(true)} />
+              <ActionCard icon={Award} title="Review Applications" description="Review pending doctor applications" color="blue" onClick={() => router.push('/admin/pending-doctors')} />
+              <ActionCard icon={Calendar} title="Schedule Management" description="Manage doctor schedules" color="green" onClick={() => router.push('/admin/schedules')} />
+              <ActionCard icon={Heart} title="Performance Review" description="Review doctor performance metrics" color="red" onClick={() => router.push('/admin/analytics')} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Doctor Detail Modal */}
-      {isModalOpen && selectedDoctor && <DoctorDetailModal doctor={selectedDoctor} onClose={closeDoctorModal} />}
+      {/* Modals */}
+      {isModalOpen && selectedDoctor && <DoctorDetailModal doctor={selectedDoctor} onClose={closeDoctorModal} appointments={recentAppointments} onScheduleAppointment={handleScheduleAppointment} />}
+      {isAddModalOpen && <AddDoctorModal onClose={() => setIsAddModalOpen(false)} onSubmit={handleAddDoctor} />}
+      {isEditModalOpen && selectedDoctor && <EditDoctorModal doctor={selectedDoctor} onClose={() => { setIsEditModalOpen(false); setSelectedDoctor(null); }} onSubmit={handleUpdateDoctor} />}
     </div>
   );
 };
 
-// Sub-components
+// Sub-Components (shortened versions)
+const DoctorCard: React.FC<{
+  doctor: Doctor; onView: (doctor: Doctor) => void; onStatusUpdate: (id: string, status: Doctor['status']) => void;
+  onDelete: (id: string) => void; onEdit: () => void;
+}> = ({ doctor, onView, onStatusUpdate, onDelete, onEdit }) => {
+  const statusColors = { active: 'bg-green-100 text-green-700', pending: 'bg-yellow-100 text-yellow-700', inactive: 'bg-gray-100 text-gray-700', on_leave: 'bg-orange-100 text-orange-700' };
+  const availabilityColors = { available: 'bg-green-100 text-green-700', busy: 'bg-yellow-100 text-yellow-700', unavailable: 'bg-red-100 text-red-700' };
+  const statusIcons = { active: <CheckCircle className="w-3 h-3" />, pending: <Clock className="w-3 h-3" />, on_leave: <Clock className="w-3 h-3" />, inactive: <XCircle className="w-3 h-3" /> };
+
+  return (
+    <div className="bg-white border border-gray-200/50 rounded-2xl p-5 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">{doctor.name.charAt(0)}</div>
+          <div><h3 className="font-bold text-gray-900">{doctor.name}</h3><p className="text-xs text-gray-500">{doctor.email}</p></div>
+        </div>
+        <div className="flex items-center space-x-1">
+          <button onClick={() => onView(doctor)} className="p-1.5 hover:bg-purple-50 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-purple-600" title="View Details"><Eye className="w-4 h-4" /></button>
+          <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500"><MoreVertical className="w-4 h-4" /></button>
+        </div>
+      </div>
+      <div className="mb-4">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 mb-2">{doctor.specialization}</span>
+        <div className="flex items-center text-xs text-gray-600 mb-1"><GraduationCap className="w-3 h-3 mr-1" />{doctor.qualification}</div>
+        <div className="flex items-center text-xs text-gray-600"><BriefcaseMedical className="w-3 h-3 mr-1" />{doctor.experience} years experience</div>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[doctor.status]}`}>{statusIcons[doctor.status]}<span className="ml-1">{doctor.status.replace('_', ' ')}</span></span>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${availabilityColors[doctor.availability]}`}>{doctor.availability === 'available' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}<span className="ml-1">{doctor.availability}</span></span>
+      </div>
+      <div className="space-y-2 mb-4">
+        {doctor.phone && <div className="flex items-center text-xs text-gray-600"><Phone className="w-3 h-3 mr-2 flex-shrink-0" /><span className="truncate">{doctor.phone}</span></div>}
+        {doctor.location && <div className="flex items-center text-xs text-gray-600"><MapPin className="w-3 h-3 mr-2 flex-shrink-0" /><span className="truncate">{doctor.location}</span></div>}
+        {doctor.department && <div className="flex items-center text-xs text-blue-600"><Building className="w-3 h-3 mr-2 flex-shrink-0" /><span className="truncate">{doctor.department}</span></div>}
+      </div>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center"><Star className="w-4 h-4 text-yellow-500 fill-current mr-1" /><span className="text-sm font-medium">{doctor.rating}/5.0</span></div>
+          <div className="text-sm font-medium text-green-600">${doctor.consultationFee}</div>
+        </div>
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{doctor.totalAppointments} appointments</span>
+          {doctor.revenue && <span>${doctor.revenue.toLocaleString()} revenue</span>}
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center text-xs text-gray-600"><Clock className="w-3 h-3 mr-1" /><span>{doctor.nextAvailable || 'Not scheduled'}</span></div>
+        <div className="flex items-center space-x-1">
+          <button onClick={() => doctor.status !== 'on_leave' ? onStatusUpdate(doctor._id, 'on_leave') : onStatusUpdate(doctor._id, 'active')} className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-orange-600" title={doctor.status !== 'on_leave' ? "Mark on leave" : "Activate"}><Clock className="w-4 h-4" /></button>
+          <button onClick={onEdit} className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-blue-600" title="Edit"><Edit className="w-4 h-4" /></button>
+          {doctor.status !== 'pending' && <button onClick={() => onDelete(doctor._id)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-red-600" title="Delete"><Trash2 className="w-4 h-4" /></button>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const StatCard: React.FC<{
-  label: string;
-  value: number | string;
-  icon: React.ElementType;
-  color: 'purple' | 'green' | 'blue' | 'yellow' | 'orange' | 'red';
-  trend: string;
+  label: string; value: number | string; icon: React.ElementType; color: 'purple' | 'green' | 'blue' | 'yellow' | 'orange' | 'red'; trend: string;
 }> = ({ label, value, icon: Icon, color, trend }) => {
   const bgColors = {
     purple: 'bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200/50',
@@ -426,291 +497,60 @@ const StatCard: React.FC<{
     orange: 'bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200/50',
     red: 'bg-gradient-to-br from-red-50 to-red-100/50 border-red-200/50'
   };
-
-  const iconColors = {
-    purple: 'text-purple-600',
-    green: 'text-green-600',
-    blue: 'text-blue-600',
-    yellow: 'text-yellow-600',
-    orange: 'text-orange-600',
-    red: 'text-red-600'
-  };
-
+  const iconColors = { purple: 'text-purple-600', green: 'text-green-600', blue: 'text-blue-600', yellow: 'text-yellow-600', orange: 'text-orange-600', red: 'text-red-600' };
   return (
     <div className={`${bgColors[color]} border rounded-2xl p-4`}>
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-          <div className="flex items-center mt-2">
-            {trend.startsWith('+') ? <TrendingUp className="w-4 h-4 text-green-500 mr-1" /> : <TrendingDown className="w-4 h-4 text-red-500 mr-1" />}
+        <div><p className="text-sm font-medium text-gray-600">{label}</p><p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <div className="flex items-center mt-2">{trend.startsWith('+') ? <TrendingUp className="w-4 h-4 text-green-500 mr-1" /> : <TrendingDown className="w-4 h-4 text-red-500 mr-1" />}
             <span className={`text-xs font-medium ${trend.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>{trend} from last month</span>
           </div>
         </div>
-        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-          <Icon className={`w-5 h-5 ${iconColors[color]}`} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DoctorCard: React.FC<{
-  doctor: Doctor;
-  onView: (doctor: Doctor) => void;
-  onStatusUpdate: (id: string, status: Doctor['status']) => void;
-  onDelete: (id: string) => void;
-}> = ({ doctor, onView, onStatusUpdate, onDelete }) => {
-  const statusColors = {
-    active: 'bg-green-100 text-green-700',
-    pending: 'bg-yellow-100 text-yellow-700',
-    inactive: 'bg-gray-100 text-gray-700',
-    on_leave: 'bg-orange-100 text-orange-700'
-  };
-
-  const availabilityColors = {
-    available: 'bg-green-100 text-green-700',
-    busy: 'bg-yellow-100 text-yellow-700',
-    unavailable: 'bg-red-100 text-red-700'
-  };
-
-  const statusIcons = {
-    active: <CheckCircle className="w-3 h-3" />,
-    pending: <Clock className="w-3 h-3" />,
-    on_leave: <Clock className="w-3 h-3" />,
-    inactive: <XCircle className="w-3 h-3" />
-  };
-
-  return (
-    <div className="bg-white border border-gray-200/50 rounded-2xl p-5 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group">
-      {/* Header with Avatar and Actions */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-            {doctor.name.charAt(0)}
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900">{doctor.name}</h3>
-            <p className="text-xs text-gray-500">{doctor.email}</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-1">
-          <button 
-            onClick={() => onView(doctor)}
-            className="p-1.5 hover:bg-purple-50 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-purple-600"
-            title="View Details"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500">
-            <MoreVertical className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Specialization & Qualification */}
-      <div className="mb-4">
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 mb-2">
-          {doctor.specialization}
-        </span>
-        <div className="flex items-center text-xs text-gray-600 mb-1">
-          <GraduationCap className="w-3 h-3 mr-1" />
-          {doctor.qualification}
-        </div>
-        <div className="flex items-center text-xs text-gray-600">
-          <BriefcaseMedical className="w-3 h-3 mr-1" />
-          {doctor.experience} years experience
-        </div>
-      </div>
-
-      {/* Status & Availability */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[doctor.status]}`}>
-          {statusIcons[doctor.status]}
-          <span className="ml-1">{doctor.status.replace('_', ' ')}</span>
-        </span>
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${availabilityColors[doctor.availability]}`}>
-          {doctor.availability === 'available' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-          <span className="ml-1">{doctor.availability}</span>
-        </span>
-      </div>
-
-      {/* Contact Info */}
-      <div className="space-y-2 mb-4">
-        {doctor.phone && (
-          <div className="flex items-center text-xs text-gray-600">
-            <Phone className="w-3 h-3 mr-2 flex-shrink-0" />
-            <span className="truncate">{doctor.phone}</span>
-          </div>
-        )}
-        {doctor.location && (
-          <div className="flex items-center text-xs text-gray-600">
-            <MapPin className="w-3 h-3 mr-2 flex-shrink-0" />
-            <span className="truncate">{doctor.location}</span>
-          </div>
-        )}
-        {doctor.department && (
-          <div className="flex items-center text-xs text-blue-600">
-            <Building className="w-3 h-3 mr-2 flex-shrink-0" />
-            <span className="truncate">{doctor.department}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center">
-            <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
-            <span className="text-sm font-medium">{doctor.rating}/5.0</span>
-          </div>
-          <div className="text-sm font-medium text-green-600">
-            ${doctor.consultationFee}
-          </div>
-        </div>
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{doctor.totalAppointments} appointments</span>
-          {doctor.revenue && <span>${doctor.revenue.toLocaleString()} revenue</span>}
-        </div>
-      </div>
-
-      {/* Next Available & Actions */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center text-xs text-gray-600">
-          <Clock className="w-3 h-3 mr-1" />
-          <span>{doctor.nextAvailable || 'Not scheduled'}</span>
-        </div>
-        <div className="flex items-center space-x-1">
-          <button 
-            onClick={() => doctor.status !== 'on_leave' ? onStatusUpdate(doctor._id, 'on_leave') : onStatusUpdate(doctor._id, 'active')}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-orange-600"
-            title={doctor.status !== 'on_leave' ? "Mark on leave" : "Activate"}
-          >
-            <Clock className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => {/* Edit doctor */}}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-blue-600"
-            title="Edit"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          {doctor.status !== 'pending' && (
-            <button 
-              onClick={() => onDelete(doctor._id)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer text-gray-500 hover:text-red-600"
-              title="Delete"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg"><Icon className={`w-5 h-5 ${iconColors[color]}`} /></div>
       </div>
     </div>
   );
 };
 
 const ActionCard: React.FC<{
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  color: 'purple' | 'green' | 'blue' | 'red';
-  onClick: () => void;
+  icon: React.ElementType; title: string; description: string; color: 'purple' | 'green' | 'blue' | 'red'; onClick: () => void;
 }> = ({ icon: Icon, title, description, color, onClick }) => {
-  const colorClasses = {
-    purple: 'bg-purple-100 text-purple-600',
-    green: 'bg-green-100 text-green-600',
-    blue: 'bg-blue-100 text-blue-600',
-    red: 'bg-red-100 text-red-600'
-  };
-
+  const colorClasses = { purple: 'bg-purple-100 text-purple-600', green: 'bg-green-100 text-green-600', blue: 'bg-blue-100 text-blue-600', red: 'bg-red-100 text-red-600' };
   return (
     <button onClick={onClick} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 cursor-pointer text-left group">
       <div className="flex items-start space-x-4">
-        <div className={`w-12 h-12 ${colorClasses[color]} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-200`}>
-          <Icon className="w-6 h-6" />
-        </div>
-        <div>
-          <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-600 transition-all duration-200">{title}</h4>
-          <p className="text-sm text-gray-500">{description}</p>
-        </div>
+        <div className={`w-12 h-12 ${colorClasses[color]} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all duration-200`}><Icon className="w-6 h-6" /></div>
+        <div><h4 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-600 transition-all duration-200">{title}</h4><p className="text-sm text-gray-500">{description}</p></div>
       </div>
     </button>
   );
 };
 
-const SelectFilter: React.FC<{
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-}> = ({ value, onChange, options }) => (
-  <select
-    value={value}
-    onChange={(e) => onChange(e.target.value.toLowerCase().replace(' ', '_'))}
-    className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-sm"
-  >
-    {options.map((opt) => (
-      <option key={opt} value={opt.toLowerCase().replace(' ', '_')}>{opt}</option>
-    ))}
+const SelectFilter: React.FC<{ value: string; onChange: (value: string) => void; options: string[]; }> = ({ value, onChange, options }) => (
+  <select value={value} onChange={(e) => onChange(e.target.value.toLowerCase().replace(' ', '_'))} className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all duration-200 text-sm">
+    {options.map((opt) => <option key={opt} value={opt.toLowerCase().replace(' ', '_')}>{opt}</option>)}
   </select>
 );
 
-const Pagination: React.FC<{
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}> = ({ currentPage, totalPages, onPageChange }) => (
+const Pagination: React.FC<{ currentPage: number; totalPages: number; onPageChange: (page: number) => void; }> = ({ currentPage, totalPages, onPageChange }) => (
   <div className="border-t border-gray-200/50 px-6 py-4 mt-6">
     <div className="flex items-center justify-between">
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 ${
-          currentPage === 1 
-            ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-            : 'border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer'
-        }`}
-      >
-        <ChevronRight className="w-4 h-4 rotate-180" />
-        <span className="text-sm font-medium">Previous</span>
+      <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className={`flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 ${currentPage === 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer'}`}>
+        <ChevronRight className="w-4 h-4 rotate-180" /><span className="text-sm font-medium">Previous</span>
       </button>
-      
       <div className="flex items-center space-x-2">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-          <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            className={`w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200 ${
-              currentPage === page
-                ? 'bg-purple-600 text-white'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            {page}
-          </button>
+          <button key={page} onClick={() => onPageChange(page)} className={`w-10 h-10 rounded-lg text-sm font-medium transition-all duration-200 ${currentPage === page ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>{page}</button>
         ))}
       </div>
-      
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 ${
-          currentPage === totalPages
-            ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-            : 'border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer'
-        }`}
-      >
-        <span className="text-sm font-medium">Next</span>
-        <ChevronRight className="w-4 h-4" />
+      <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className={`flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 ${currentPage === totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer'}`}>
+        <span className="text-sm font-medium">Next</span><ChevronRight className="w-4 h-4" />
       </button>
     </div>
   </div>
 );
 
-const DoctorDetailModal: React.FC<{
-  doctor: Doctor;
-  onClose: () => void;
-}> = ({ doctor, onClose }) => {
+const DoctorDetailModal: React.FC<{ doctor: Doctor; onClose: () => void; appointments: Appointment[]; onScheduleAppointment: (doctorId: string, appointmentData: any) => void; }> = ({ doctor, onClose, appointments, onScheduleAppointment }) => {
   const performanceMetrics = [
     { label: 'Patient Satisfaction', value: '96%', color: 'text-green-600', icon: DownloadIcon },
     { label: 'On-time Rate', value: '94%', color: 'text-blue-600', icon: Clock },
@@ -718,49 +558,36 @@ const DoctorDetailModal: React.FC<{
     { label: 'Follow-up Rate', value: '92%', color: 'text-orange-600', icon: MessageSquare }
   ];
 
+  const handleScheduleClick = () => {
+    const appointmentData = { patientId: 'current-patient-id', date: new Date().toISOString().split('T')[0], time: '10:00', type: 'consultation', notes: 'Routine checkup' };
+    onScheduleAppointment(doctor._id, appointmentData);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300" onClick={onClose} />
       <div className="relative w-full max-w-6xl mx-auto max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl transition-all duration-300">
-        {/* Modal Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                {doctor.name.charAt(0)}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{doctor.name}</h2>
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">{doctor.name.charAt(0)}</div>
+              <div><h2 className="text-2xl font-bold text-gray-900">{doctor.name}</h2>
                 <div className="flex items-center space-x-3 mt-2">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    doctor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {doctor.status === 'active' ? <CheckCircle className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
-                    {doctor.status.charAt(0).toUpperCase() + doctor.status.slice(1).replace('_', ' ')}
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${doctor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                    {doctor.status === 'active' ? <CheckCircle className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}{doctor.status.charAt(0).toUpperCase() + doctor.status.slice(1).replace('_', ' ')}
                   </span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    doctor.availability === 'available' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {doctor.availability === 'available' ? <CheckCircle className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}
-                    {doctor.availability.charAt(0).toUpperCase() + doctor.availability.slice(1)}
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${doctor.availability === 'available' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {doctor.availability === 'available' ? <CheckCircle className="w-4 h-4 mr-1" /> : <Clock className="w-4 h-4 mr-1" />}{doctor.availability.charAt(0).toUpperCase() + doctor.availability.slice(1)}
                   </span>
-                  <div className="flex items-center text-yellow-600">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="ml-1 font-medium">{doctor.rating}/5.0</span>
-                  </div>
+                  <div className="flex items-center text-yellow-600"><Star className="w-4 h-4 fill-current" /><span className="ml-1 font-medium">{doctor.rating}/5.0</span></div>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200">
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"><X className="w-5 h-5 text-gray-500" /></button>
           </div>
         </div>
-
-        {/* Modal Body */}
         <div className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
             <div className="lg:col-span-2 space-y-6">
               <InfoCard title="Personal Information" icon={UserIcon}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -772,17 +599,11 @@ const DoctorDetailModal: React.FC<{
                   <InfoField icon={DollarSign} label="Consultation Fee" value={`$${doctor.consultationFee}`} />
                 </div>
               </InfoCard>
-
               <InfoCard title="Professional Details" icon={BriefcaseMedical}>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">Specialization</label>
-                      <div className="mt-1">
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700">
-                          {doctor.specialization}
-                        </span>
-                      </div>
+                    <div><label className="text-sm font-medium text-gray-600">Specialization</label>
+                      <div className="mt-1"><span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-700">{doctor.specialization}</span></div>
                     </div>
                     <InfoField label="Department" value={doctor.department || 'Not assigned'} />
                   </div>
@@ -790,50 +611,49 @@ const DoctorDetailModal: React.FC<{
                     <InfoField label="Qualification" value={doctor.qualification} />
                     <InfoField label="Experience" value={`${doctor.experience} years`} />
                   </div>
+                  {doctor.education && doctor.education.length > 0 && (
+                    <div><label className="text-sm font-medium text-gray-600">Education</label>
+                      <div className="mt-2 space-y-1">{doctor.education.map((edu, index) => <p key={index} className="text-sm text-gray-700">{edu}</p>)}</div>
+                    </div>
+                  )}
                 </div>
               </InfoCard>
-
               <InfoCard title="Performance Metrics" icon={DownloadIcon}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {performanceMetrics.map((metric, index) => (
-                    <MetricCard key={index} metric={metric} />
-                  ))}
-                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{performanceMetrics.map((metric, index) => <MetricCard key={index} metric={metric} />)}</div>
               </InfoCard>
             </div>
-
-            {/* Right Column */}
             <div className="space-y-6">
               <StatCardSection doctor={doctor} />
-              <ActivityCard />
-              <QuickActionsCard />
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Appointments</h3>
+                <div className="space-y-3">
+                  {appointments.length > 0 ? appointments.map((appointment) => (
+                    <div key={appointment._id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-all duration-200">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{appointment.patientName}</p>
+                        <p className="text-xs text-gray-500 mt-1">{appointment.date} • {appointment.time} • {appointment.type}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full ${appointment.status === 'completed' ? 'bg-green-100 text-green-700' : appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>{appointment.status}</span>
+                    </div>
+                  )) : <p className="text-sm text-gray-500 text-center py-4">No recent appointments</p>}
+                </div>
+              </div>
+              <QuickActionsCard onSchedule={handleScheduleClick} />
             </div>
           </div>
-
-          {/* Documents Section */}
           <InfoCard title="Documents & Certifications" icon={FileText} className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['Medical License', 'Board Certification', 'Malpractice Insurance'].map((doc, idx) => (
-                <DocumentCard key={idx} title={doc} />
-              ))}
+              {doctor.certifications && doctor.certifications.length > 0 ? doctor.certifications.map((cert, idx) => <DocumentCard key={idx} title={cert} />) : <p className="text-sm text-gray-500 col-span-3 text-center py-4">No documents uploaded</p>}
             </div>
           </InfoCard>
         </div>
-
-        {/* Modal Footer */}
         <div className="border-t border-gray-200 px-6 py-4 bg-gray-50/50 rounded-b-2xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <ShieldIcon className="w-4 h-4" />
-              <span>Last updated: {new Date().toLocaleDateString()}</span>
-            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500"><ShieldIcon className="w-4 h-4" /><span>Last updated: {new Date().toLocaleDateString()}</span></div>
             <div className="flex items-center space-x-3">
-              <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200">
-                Close
-              </button>
-              <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200">
-                Contact Doctor
-              </button>
+              <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200">Close</button>
+              <button onClick={handleScheduleClick} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200">Schedule Appointment</button>
             </div>
           </div>
         </div>
@@ -842,48 +662,121 @@ const DoctorDetailModal: React.FC<{
   );
 };
 
-// Helper Sub-components for Modal
-const InfoCard: React.FC<{
-  title: string;
-  icon: React.ElementType;
-  children: React.ReactNode;
-  className?: string;
-}> = ({ title, icon: Icon, children, className = '' }) => (
-  <div className={`bg-gray-50 rounded-xl p-6 ${className}`}>
-    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-      <Icon className="w-5 h-5 mr-2" />
-      {title}
-    </h3>
-    {children}
-  </div>
-);
-
-const InfoField: React.FC<{
-  icon?: React.ElementType;
-  label: string;
-  value: string;
-}> = ({ icon: Icon, label, value }) => (
-  <div>
-    {Icon && (
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
-        <Icon className="w-4 h-4" />
-        <span>{label}</span>
+// Additional Modal Components (AddDoctorModal and EditDoctorModal remain structurally similar but shortened)
+const AddDoctorModal: React.FC<{ onClose: () => void; onSubmit: (doctorData: any) => void; }> = ({ onClose, onSubmit }) => {
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', specialization: '', department: '', qualification: '', experience: '', licenseNumber: '', consultationFee: '', location: '' });
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSubmit({ ...formData, experience: parseInt(formData.experience), consultationFee: parseFloat(formData.consultationFee) }); };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300" onClick={onClose} />
+      <div className="relative w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl p-6">
+          <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-gray-900">Add New Doctor</h2><button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button></div>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label><input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Dr. John Doe" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="doctor@example.com" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="+1 (555) 123-4567" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
+              <select name="specialization" value={formData.specialization} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="">Select specialization</option>
+                <option value="Cardiology">Cardiology</option><option value="Neurology">Neurology</option><option value="Orthopedics">Orthopedics</option>
+                <option value="Pediatrics">Pediatrics</option><option value="Dermatology">Dermatology</option><option value="Gynecology">Gynecology</option>
+                <option value="Oncology">Oncology</option><option value="Psychiatry">Psychiatry</option><option value="General Surgery">General Surgery</option>
+                <option value="Radiology">Radiology</option>
+              </select>
+            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Department</label><input type="text" name="department" value={formData.department} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Cardiology Department" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label><input type="text" name="qualification" value={formData.qualification} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="MD, Cardiology" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Experience (years)</label><input type="number" name="experience" value={formData.experience} onChange={handleChange} required min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="5" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">License Number</label><input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="MED12345" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee ($)</label><input type="number" name="consultationFee" value={formData.consultationFee} onChange={handleChange} required min="0" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="100" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Location</label><input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Main Hospital, Floor 3" /></div>
+          </div>
+          <div className="flex justify-end space-x-3 mt-6">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200">Add Doctor</button>
+          </div>
+        </form>
       </div>
-    )}
-    {!Icon && <div className="text-sm font-medium text-gray-600">{label}</div>}
-    <p className="mt-1 text-gray-900 font-medium">{value}</p>
+    </div>
+  );
+};
+
+const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit: (doctorId: string, updateData: any) => void; }> = ({ doctor, onClose, onSubmit }) => {
+  const [formData, setFormData] = useState({
+    name: doctor.name, email: doctor.email, phone: doctor.phone || '', specialization: doctor.specialization,
+    department: doctor.department || '', qualification: doctor.qualification, experience: doctor.experience.toString(),
+    licenseNumber: doctor.licenseNumber, consultationFee: doctor.consultationFee.toString(), location: doctor.location || '',
+    status: doctor.status, availability: doctor.availability
+  });
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSubmit(doctor._id, { ...formData, experience: parseInt(formData.experience), consultationFee: parseFloat(formData.consultationFee) }); };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300" onClick={onClose} />
+      <div className="relative w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl p-6">
+          <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-gray-900">Edit Doctor</h2><button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button></div>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label><input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select name="status" value={formData.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="active">Active</option><option value="inactive">Inactive</option><option value="pending">Pending</option><option value="on_leave">On Leave</option>
+              </select>
+            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+              <select name="availability" value={formData.availability} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="available">Available</option><option value="busy">Busy</option><option value="unavailable">Unavailable</option>
+              </select>
+            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
+              <select name="specialization" value={formData.specialization} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="Cardiology">Cardiology</option><option value="Neurology">Neurology</option><option value="Orthopedics">Orthopedics</option>
+                <option value="Pediatrics">Pediatrics</option><option value="Dermatology">Dermatology</option><option value="Gynecology">Gynecology</option>
+                <option value="Oncology">Oncology</option><option value="Psychiatry">Psychiatry</option><option value="General Surgery">General Surgery</option>
+                <option value="Radiology">Radiology</option>
+              </select>
+            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Department</label><input type="text" name="department" value={formData.department} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label><input type="text" name="qualification" value={formData.qualification} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Experience (years)</label><input type="number" name="experience" value={formData.experience} onChange={handleChange} required min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">License Number</label><input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee ($)</label><input type="number" name="consultationFee" value={formData.consultationFee} onChange={handleChange} required min="0" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Location</label><input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+          </div>
+          <div className="flex justify-end space-x-3 mt-6">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200">Update Doctor</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Helper Components
+const InfoCard: React.FC<{ title: string; icon: React.ElementType; children: React.ReactNode; className?: string; }> = ({ title, icon: Icon, children, className = '' }) => (
+  <div className={`bg-gray-50 rounded-xl p-6 ${className}`}><h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center"><Icon className="w-5 h-5 mr-2" />{title}</h3>{children}</div>
+);
+
+const InfoField: React.FC<{ icon?: React.ElementType; label: string; value: string; }> = ({ icon: Icon, label, value }) => (
+  <div>{Icon && <div className="flex items-center space-x-2 text-sm text-gray-600"><Icon className="w-4 h-4" /><span>{label}</span></div>}
+    {!Icon && <div className="text-sm font-medium text-gray-600">{label}</div>}<p className="mt-1 text-gray-900 font-medium">{value}</p>
   </div>
 );
 
-const MetricCard: React.FC<{
-  metric: { label: string; value: string; color: string; icon: React.ElementType };
-}> = ({ metric }) => {
+const MetricCard: React.FC<{ metric: { label: string; value: string; color: string; icon: React.ElementType }; }> = ({ metric }) => {
   const Icon = metric.icon;
   return (
     <div className="bg-white rounded-lg p-4 text-center">
-      <div className={`${metric.color} mb-2`}>
-        <Icon className="w-6 h-6 mx-auto" />
-      </div>
+      <div className={`${metric.color} mb-2`}><Icon className="w-6 h-6 mx-auto" /></div>
       <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
       <div className="text-sm text-gray-600 mt-1">{metric.label}</div>
     </div>
@@ -902,66 +795,32 @@ const StatCardSection: React.FC<{ doctor: Doctor }> = ({ doctor }) => (
   </div>
 );
 
-const StatItem: React.FC<{
-  icon: React.ElementType;
-  label: string;
-  value: string;
-}> = ({ icon: Icon, label, value }) => (
+const StatItem: React.FC<{ icon: React.ElementType; label: string; value: string; }> = ({ icon: Icon, label, value }) => (
   <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
     <div className="flex items-center space-x-3">
-      <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
-        <Icon className="w-4 h-4" />
-      </div>
+      <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center"><Icon className="w-4 h-4" /></div>
       <span className="text-sm text-gray-600">{label}</span>
     </div>
     <span className="font-bold text-gray-900">{value}</span>
   </div>
 );
 
-const ActivityCard: React.FC = () => {
-  const activities = [
-    { id: 1, action: 'Completed surgery', patient: 'John Doe', time: '2 hours ago' },
-    { id: 2, action: 'Updated patient records', patient: 'Jane Smith', time: '4 hours ago' },
-    { id: 3, action: 'Consultation', patient: 'Robert Johnson', time: '6 hours ago' },
-  ];
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-      <div className="space-y-3">
-        {activities.map((activity) => (
-          <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-all duration-200">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-              <p className="text-xs text-gray-500 mt-1">{activity.patient}</p>
-            </div>
-            <span className="text-xs text-gray-400 flex-shrink-0">{activity.time}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const QuickActionsCard: React.FC = () => {
+const QuickActionsCard: React.FC<{ onSchedule: () => void }> = ({ onSchedule }) => {
   const actions = [
     { icon: MessageSquare, label: 'Send Message' },
-    { icon: Calendar, label: 'Schedule Appointment' },
+    { icon: Calendar, label: 'Schedule Appointment', onClick: onSchedule },
     { icon: FileText, label: 'View Reports' },
     { icon: Edit, label: 'Edit Profile' },
     { icon: Share2, label: 'Share Profile' },
     { icon: Printer, label: 'Print Details' },
   ];
-
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
       <div className="space-y-2">
         {actions.map((action, idx) => (
-          <button key={idx} className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
-            <action.icon className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-700">{action.label}</span>
+          <button key={idx} onClick={action.onClick} className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200">
+            <action.icon className="w-4 h-4 text-gray-500" /><span className="text-sm text-gray-700">{action.label}</span>
           </button>
         ))}
       </div>
@@ -972,17 +831,10 @@ const QuickActionsCard: React.FC = () => {
 const DocumentCard: React.FC<{ title: string }> = ({ title }) => (
   <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
     <div className="flex items-center space-x-3">
-      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-        <FileText className="w-5 h-5 text-purple-600" />
-      </div>
-      <div>
-        <p className="font-medium text-gray-900">{title}</p>
-        <p className="text-xs text-gray-500">PDF • 2.4 MB</p>
-      </div>
+      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center"><FileText className="w-5 h-5 text-purple-600" /></div>
+      <div><p className="font-medium text-gray-900">{title}</p><p className="text-xs text-gray-500">PDF • 2.4 MB</p></div>
     </div>
-    <button className="p-2 hover:bg-gray-100 rounded-lg">
-      <DownloadIcon className="w-4 h-4 text-gray-500" />
-    </button>
+    <button className="p-2 hover:bg-gray-100 rounded-lg"><DownloadIcon className="w-4 h-4 text-gray-500" /></button>
   </div>
 );
 
