@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Filter, Search, Stethoscope, Pill, Activity, Heart, Thermometer, Eye, Calendar, User, X, Building2, Phone, Mail } from 'lucide-react';
+import {
+    FileText, Download, Filter, Search, Stethoscope, Pill,
+    Activity, Heart, Thermometer, Eye, Calendar, User, X,
+    Building2, Phone, Mail, ChevronRight, Clock, AlertCircle,
+    Printer, Share2, Star, ClipboardCheck, TrendingUp, Shield,
+    FileCheck, AlertTriangle, ChevronDown, ChevronUp, ExternalLink
+} from 'lucide-react';
 import api from '@/lib/api/api';
 
 interface VitalSigns {
@@ -51,10 +57,12 @@ const MedicalRecordsPage = () => {
     const [records, setRecords] = useState<MedicalRecord[]>([]);
     const [filteredRecords, setFilteredRecords] = useState<MedicalRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'consultation' | 'prescription' | 'lab-report' | 'diagnosis'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'consultation' | 'lab-report' | 'diagnosis'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [expandedVitals, setExpandedVitals] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     useEffect(() => {
         fetchMedicalRecords();
@@ -70,160 +78,42 @@ const MedicalRecordsPage = () => {
             const response = await api.get('/medical-records/my');
             let data = response.data.data || response.data || [];
 
-            console.log('========== DEBUGGING DOCTOR INFO ==========');
-            console.log('Raw API Response:', response.data);
-            console.log('Records data:', data);
-            console.log('Number of records:', data.length);
+            console.log('Medical Records Response:', data);
 
-            if (data.length > 0) {
-                console.log('First record:', data[0]);
-                console.log('First record doctorId:', data[0].doctorId);
-                console.log('Type of doctorId:', typeof data[0].doctorId);
-                console.log('Is doctorId an object?', data[0].doctorId && typeof data[0].doctorId === 'object');
-
-                if (data[0].doctorId && typeof data[0].doctorId === 'object') {
-                    console.log('Doctor object keys:', Object.keys(data[0].doctorId));
-                    console.log('Doctor firstName:', data[0].doctorId.firstName);
-                    console.log('Doctor lastName:', data[0].doctorId.lastName);
-                    console.log('Doctor specialization:', data[0].doctorId.specialization);
-                    console.log('Doctor _id:', data[0].doctorId._id);
-                }
-            }
-
-            // Transform the records to match our interface
             const transformedRecords = data.map((record: any) => {
-                console.log('Processing record ID:', record._id);
-                console.log('Record doctorId value:', record.doctorId);
-                console.log('Record doctorId type:', typeof record.doctorId);
-
                 let doctor = null;
 
-                // Check if doctorId is populated (it's an object, not just a string ID)
-                if (record.doctorId && typeof record.doctorId === 'object') {
+                if (record.doctorId && typeof record.doctorId === 'object' && record.doctorId._id) {
                     const doctorData = record.doctorId;
-                    console.log('Doctor data found:', doctorData);
-
-                    const firstName = doctorData.firstName || '';
-                    const lastName = doctorData.lastName || '';
-                    const fullName = `${firstName} ${lastName}`.trim();
-
-                    console.log('Constructed doctor name:', fullName);
+                    let doctorName = doctorData.name || '';
+                    if (!doctorName && (doctorData.firstName || doctorData.lastName)) {
+                        doctorName = `${doctorData.firstName || ''} ${doctorData.lastName || ''}`.trim();
+                    }
 
                     doctor = {
-                        _id: doctorData._id || doctorData.id || 'unknown',
-                        name: fullName || 'Doctor',
+                        _id: doctorData._id,
+                        name: doctorName || 'Doctor',
                         email: doctorData.email,
                         phone: doctorData.phone || doctorData.phoneNumber,
                         specialization: doctorData.specialization || doctorData.specialty,
                         hospital: doctorData.hospital || doctorData.hospitalName,
                         profilePicture: doctorData.profilePicture || doctorData.avatar
                     };
-
-                    console.log('Created doctor object:', doctor);
-                } else if (record.doctorId && typeof record.doctorId === 'string') {
-                    console.log('DoctorId is a string (not populated):', record.doctorId);
-                } else {
-                    console.log('DoctorId is null or undefined');
                 }
-
-                const finalDoctor = doctor || {
-                    _id: 'unknown',
-                    name: 'Doctor Information Unavailable',
-                    email: undefined,
-                    phone: undefined,
-                    specialization: undefined,
-                    hospital: undefined
-                };
-
-                console.log('Final doctor for record:', finalDoctor);
 
                 return {
                     ...record,
-                    doctor: finalDoctor
+                    doctor: doctor || {
+                        _id: 'unknown',
+                        name: 'Doctor Information Unavailable'
+                    }
                 };
             });
 
-            console.log('========== FINAL TRANSFORMED RECORDS ==========');
-            console.log('Transformed records:', transformedRecords);
-            console.log('==============================================');
-
+            console.log('Transformed records with doctor info:', transformedRecords);
             setRecords(transformedRecords);
         } catch (error) {
             console.error('Error fetching medical records:', error);
-            // Mock data for demonstration
-            setRecords([
-                {
-                    _id: '1',
-                    type: 'prescription',
-                    title: 'Antibiotics Prescription',
-                    date: '2024-01-15',
-                    description: 'For bacterial infection treatment',
-                    prescription: 'Amoxicillin 500mg - Take 3 times daily for 7 days',
-                    tags: ['Antibiotics', 'Infection', '7 days'],
-                    status: 'active',
-                    vitalSigns: {
-                        temperature: 98.6,
-                        bloodPressure: '120/80'
-                    },
-                    doctor: {
-                        _id: 'doc1',
-                        name: 'Dr. Smith Johnson',
-                        email: 'smith.johnson@hospital.com',
-                        phone: '+1 234-567-8900',
-                        specialization: 'General Medicine',
-                        hospital: 'City General Hospital'
-                    }
-                },
-                {
-                    _id: '2',
-                    type: 'lab-report',
-                    title: 'Blood Test Results',
-                    date: '2024-01-10',
-                    description: 'Complete blood count and lipid profile',
-                    tags: ['Blood Test', 'CBC', 'Lipid Profile'],
-                    status: 'active',
-                    attachments: [
-                        {
-                            fileName: 'blood-test-results.pdf',
-                            fileUrl: '#',
-                            fileType: 'application/pdf'
-                        }
-                    ],
-                    doctor: {
-                        _id: 'doc2',
-                        name: 'Dr. Emma Wilson',
-                        email: 'emma.wilson@hospital.com',
-                        specialization: 'Pathology',
-                        hospital: 'City General Hospital'
-                    }
-                },
-                {
-                    _id: '3',
-                    type: 'consultation',
-                    title: 'Annual Checkup',
-                    date: '2024-01-05',
-                    description: 'Routine annual physical examination',
-                    diagnosis: 'Overall good health',
-                    treatment: 'Continue current lifestyle',
-                    notes: 'Patient advised to maintain regular exercise and balanced diet',
-                    tags: ['Checkup', 'Physical', 'Routine'],
-                    status: 'active',
-                    vitalSigns: {
-                        bloodPressure: '118/76',
-                        heartRate: 72,
-                        temperature: 98.2,
-                        weight: 68
-                    },
-                    doctor: {
-                        _id: 'doc3',
-                        name: 'Dr. Michael Chen',
-                        email: 'michael.chen@hospital.com',
-                        phone: '+1 234-567-8901',
-                        specialization: 'Family Medicine',
-                        hospital: 'City General Hospital'
-                    }
-                }
-            ]);
         } finally {
             setLoading(false);
         }
@@ -237,10 +127,12 @@ const MedicalRecordsPage = () => {
         }
 
         if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
             filtered = filtered.filter(record =>
-                record.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (record.doctor?.name && record.doctor.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                record.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+                record.title.toLowerCase().includes(searchLower) ||
+                (record.doctor?.name && record.doctor.name.toLowerCase().includes(searchLower)) ||
+                record.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
+                (record.description && record.description.toLowerCase().includes(searchLower))
             );
         }
 
@@ -249,29 +141,44 @@ const MedicalRecordsPage = () => {
 
     const getRecordIcon = (type: string) => {
         switch (type) {
-            case 'prescription': return <Pill className="w-5 h-5" />;
             case 'lab-report': return <Activity className="w-5 h-5" />;
             case 'diagnosis': return <Stethoscope className="w-5 h-5" />;
-            case 'consultation': return <Heart className="w-5 h-5" />;
-            case 'vaccination': return <Heart className="w-5 h-5" />;
+            case 'consultation': return <FileCheck className="w-5 h-5" />;
+            case 'vaccination': return <Shield className="w-5 h-5" />;
             default: return <FileText className="w-5 h-5" />;
         }
     };
 
     const getRecordColor = (type: string) => {
         switch (type) {
-            case 'prescription': return 'bg-blue-100 text-blue-600';
-            case 'lab-report': return 'bg-green-100 text-green-600';
-            case 'diagnosis': return 'bg-purple-100 text-purple-600';
-            case 'consultation': return 'bg-orange-100 text-orange-600';
-            case 'vaccination': return 'bg-red-100 text-red-600';
-            default: return 'bg-gray-100 text-gray-600';
+            case 'lab-report': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            case 'diagnosis': return 'bg-purple-50 text-purple-700 border-purple-200';
+            case 'consultation': return 'bg-amber-50 text-amber-700 border-amber-200';
+            case 'vaccination': return 'bg-green-50 text-green-700 border-green-200';
+            default: return 'bg-gray-50 text-gray-700 border-gray-200';
+        }
+    };
+
+    const getPriorityBadge = (type: string) => {
+        switch (type) {
+            case 'lab-report': return { label: 'Reviewed', color: 'bg-emerald-100 text-emerald-800' };
+            case 'diagnosis': return { label: 'Critical', color: 'bg-red-100 text-red-800' };
+            default: return { label: 'Active', color: 'bg-gray-100 text-gray-800' };
         }
     };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const formatDateShort = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric'
         });
@@ -280,437 +187,609 @@ const MedicalRecordsPage = () => {
     const handleView = (record: MedicalRecord) => {
         setSelectedRecord(record);
         setShowDetailModal(true);
+        setExpandedVitals(false);
+    };
+
+    const handleDownloadAll = (attachments: Attachment[]) => {
+        // Implement bulk download logic here
+        console.log('Downloading all attachments:', attachments);
+    };
+
+    const handleShare = (record: MedicalRecord) => {
+        // Implement share functionality here
+        console.log('Sharing record:', record);
+        if (navigator.share) {
+            navigator.share({
+                title: record.title,
+                text: `Medical Record: ${record.title}`,
+                url: window.location.href
+            });
+        }
+    };
+
+    const handlePrint = () => {
+        window.print();
     };
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-50">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="relative">
-                        <div className="w-16 h-16 border-4 border-blue-100 rounded-full"></div>
-                        <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                    <div className="relative inline-block">
+                        <div className="w-20 h-20 border-4 border-blue-100 rounded-full"></div>
+                        <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
                     </div>
-                    <p className="mt-6 text-gray-600 font-medium">Loading medical records...</p>
+                    <p className="mt-6 text-lg font-medium text-gray-700">Loading your medical records...</p>
+                    <p className="text-sm text-gray-500 mt-2">Please wait while we fetch your health information</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="p-8 min-h-screen bg-gradient-to-br from-blue-50 to-gray-50">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Header */}
                 <div className="mb-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Medical Records</h1>
-                            <p className="text-gray-500 mt-2">View your medical history and health documents</p>
+                            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Medical Records</h1>
+                            <p className="text-gray-600 mt-2 flex items-center">
+                                <Shield className="w-4 h-4 mr-2 text-blue-600" />
+                                Secure access to your complete medical history
+                            </p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                {viewMode === 'grid' ? 'List View' : 'Grid View'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Stats Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Total Records</p>
+                                    <p className="text-2xl font-bold text-gray-900">{records.length}</p>
+                                </div>
+                                <FileText className="w-8 h-8 text-blue-600" />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Lab Reports</p>
+                                    <p className="text-2xl font-bold text-gray-900">
+                                        {records.filter(r => r.type === 'lab-report').length}
+                                    </p>
+                                </div>
+                                <Activity className="w-8 h-8 text-emerald-600" />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Consultations</p>
+                                    <p className="text-2xl font-bold text-gray-900">
+                                        {records.filter(r => r.type === 'consultation').length}
+                                    </p>
+                                </div>
+                                <Stethoscope className="w-8 h-8 text-amber-600" />
+                            </div>
                         </div>
                     </div>
 
                     {/* Search and Filters */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-8">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search records by title, doctor, or tags..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-200"
-                            />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Filter className="w-5 h-5 text-gray-500" />
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+                        <div className="flex flex-col lg:flex-row gap-4">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                <input
+                                    type="text"
+                                    placeholder="Search records by title, doctor, diagnosis, or tags..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                />
+                            </div>
+
                             <div className="flex flex-wrap gap-2">
-                                {(['all', 'consultation', 'prescription', 'lab-report', 'diagnosis'] as const).map((filter) => (
+                                <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
+                                    <Filter className="w-4 h-4 text-gray-500" />
+                                    <span className="text-sm text-gray-700">Filter:</span>
+                                </div>
+                                {(['all', 'consultation', 'lab-report', 'diagnosis'] as const).map((filter) => (
                                     <button
                                         key={filter}
                                         onClick={() => setActiveFilter(filter)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeFilter === filter
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeFilter === filter
+                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                                             }`}
                                     >
-                                        {filter === 'all' ? 'All Records' : filter.charAt(0).toUpperCase() + filter.slice(1).replace('-', ' ')}
+                                        {filter === 'all' ? 'All Records' :
+                                            filter.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                     </button>
                                 ))}
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Records Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Records Display */}
                     {filteredRecords.length > 0 ? (
-                        filteredRecords.map((record) => (
-                            <div
-                                key={record._id}
-                                className="bg-white rounded-2xl shadow-lg shadow-blue-500/5 border border-gray-200/50 overflow-hidden hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300"
-                            >
-                                <div className="p-6">
-                                    {/* Header */}
+                        <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}`}>
+                            {filteredRecords.map((record) => (
+                                <div
+                                    key={record._id}
+                                    className={`bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 ${viewMode === 'list' ? 'p-6' : 'p-5'}`}
+                                >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center space-x-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getRecordColor(record.type).split(' ')[0]}`}>
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getRecordColor(record.type).split(' ')[0]}`}>
                                                 {getRecordIcon(record.type)}
                                             </div>
                                             <div>
-                                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getRecordColor(record.type)}`}>
-                                                    {record.type}
-                                                </span>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getRecordColor(record.type)} border`}>
+                                                        {record.type.replace('-', ' ')}
+                                                    </span>
+                                                    <span className={`text-xs px-2.5 py-1 rounded-full ${getPriorityBadge(record.type).color}`}>
+                                                        {getPriorityBadge(record.type).label}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                        {record.attachments && record.attachments.length > 0 && (
-                                            <button
-                                                onClick={() => window.open(record.attachments![0].fileUrl, '_blank')}
-                                                className="p-1 hover:bg-gray-50 rounded-lg transition-colors"
-                                            >
-                                                <Download className="w-4 h-4 text-gray-600" />
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => handleView(record)}
+                                            className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                                        >
+                                            <ChevronRight className="w-5 h-5 text-gray-400" />
+                                        </button>
                                     </div>
 
-                                    {/* Content */}
-                                    <div className="mb-6">
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-2">{record.title}</h4>
-                                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{record.description}</p>
+                                    <div className="mb-4">
+                                        <h3 className="font-semibold text-gray-900 mb-2">{record.title}</h3>
+                                        {record.description && (
+                                            <p className="text-sm text-gray-600 line-clamp-2 mb-3">{record.description}</p>
+                                        )}
 
-                                        <div className="space-y-2 text-sm text-gray-500 mb-4">
+                                        <div className="space-y-2">
                                             {record.doctor && (
-                                                <div className="flex items-center">
+                                                <div className="flex items-center text-sm text-gray-600">
                                                     <User className="w-4 h-4 mr-2 flex-shrink-0" />
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-gray-700">{record.doctor.name}</span>
-                                                        {record.doctor.specialization && (
-                                                            <span className="text-xs text-gray-500">{record.doctor.specialization}</span>
-                                                        )}
-                                                    </div>
+                                                    <span className="truncate">{record.doctor.name}</span>
+                                                    {record.doctor.specialization && (
+                                                        <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
+                                                            {record.doctor.specialization}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
-                                            <div className="flex items-center">
-                                                <Calendar className="w-4 h-4 mr-2" />
-                                                <span>{formatDate(record.date)}</span>
+                                            <div className="flex items-center text-sm text-gray-600">
+                                                <Calendar className="w-4 h-4 mr-2 flex-shrink-0" />
+                                                <span>{formatDateShort(record.date)}</span>
                                             </div>
-                                        </div>
-
-                                        {/* Tags */}
-                                        <div className="flex flex-wrap gap-2">
-                                            {record.tags.slice(0, 2).map((tag, index) => (
-                                                <span
-                                                    key={index}
-                                                    className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full"
-                                                >
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                            {record.tags.length > 2 && (
-                                                <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
-                                                    +{record.tags.length - 2} more
-                                                </span>
-                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Actions */}
+                                    {record.tags && record.tags.length > 0 && (
+                                        <div className="mb-4">
+                                            <div className="flex flex-wrap gap-2">
+                                                {record.tags.slice(0, 3).map((tag, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full"
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                                {record.tags.length > 3 && (
+                                                    <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
+                                                        +{record.tags.length - 3} more
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                                         <button
                                             onClick={() => handleView(record)}
-                                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                            className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
                                         >
                                             <Eye className="w-4 h-4" />
                                             <span>View Details</span>
                                         </button>
-                                        {record.attachments && record.attachments.length > 0 && (
-                                            <span className="text-xs text-gray-500">
-                                                {record.attachments.length} file{record.attachments.length > 1 ? 's' : ''}
-                                            </span>
-                                        )}
+
+                                        <div className="flex items-center space-x-2">
+                                            {record.attachments && record.attachments.length > 0 && (
+                                                <span className="text-xs text-gray-500 flex items-center">
+                                                    <FileText className="w-3 h-3 mr-1" />
+                                                    {record.attachments.length} file{record.attachments.length > 1 ? 's' : ''}
+                                                </span>
+                                            )}
+                                            {record.vitalSigns && Object.keys(record.vitalSigns).length > 0 && (
+                                                <span className="text-xs text-gray-500 flex items-center">
+                                                    <TrendingUp className="w-3 h-3 mr-1" />
+                                                    Vitals
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     ) : (
-                        <div className="col-span-3 text-center py-16">
-                            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                <FileText className="w-12 h-12 text-blue-600" />
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <FileText className="w-10 h-10 text-blue-600" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">No records found</h3>
-                            <p className="text-gray-500 max-w-md mx-auto">
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">No records found</h3>
+                            <p className="text-gray-600 max-w-md mx-auto mb-6">
                                 {searchTerm
-                                    ? 'No records match your search criteria'
-                                    : 'You don\'t have any medical records yet. Your doctor will add records after appointments.'}
+                                    ? 'No medical records match your search criteria. Try different keywords.'
+                                    : 'Your medical records will appear here after your appointments and consultations.'}
                             </p>
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    Clear Search
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
 
-                {/* Health Summary */}
-                {records.length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-lg shadow-blue-500/5 border border-gray-200/50 p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">Health Summary</h2>
-                                <p className="text-gray-500">Latest vital signs from your records</p>
+                {/* Detail Modal - Enhanced */}
+                {showDetailModal && selectedRecord && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                            {/* Modal Header */}
+                            <div className="bg-gradient-to-r from-blue-50 to-blue-100/30 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getRecordColor(selectedRecord.type).split(' ')[0]}`}>
+                                        {getRecordIcon(selectedRecord.type)}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900">{selectedRecord.title}</h2>
+                                        <div className="flex items-center space-x-2">
+                                            <span className={`text-xs font-medium px-2 py-1 rounded ${getRecordColor(selectedRecord.type)}`}>
+                                                {selectedRecord.type.replace('-', ' ').toUpperCase()}
+                                            </span>
+                                            <span className="text-xs text-gray-500">
+                                                {formatDate(selectedRecord.date)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={handlePrint}
+                                        className="p-2 hover:bg-white rounded-lg transition-colors"
+                                        title="Print"
+                                    >
+                                        <Printer className="w-5 h-5 text-gray-600" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleShare(selectedRecord)}
+                                        className="p-2 hover:bg-white rounded-lg transition-colors"
+                                        title="Share"
+                                    >
+                                        <Share2 className="w-5 h-5 text-gray-600" />
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDetailModal(false)}
+                                        className="p-2 hover:bg-white rounded-lg transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-gray-600" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            {records.some(r => r.vitalSigns?.heartRate) && (
-                                <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-4">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                                            <Heart className="w-5 h-5 text-blue-600" />
+                            {/* Modal Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    {/* Left Column - Main Content */}
+                                    <div className="lg:col-span-2 space-y-6">
+                                        {/* Doctor Information Card */}
+                                        {selectedRecord.doctor && (
+                                            <div className="bg-gray-50 rounded-xl p-5">
+                                                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                                                    <User className="w-5 h-5 mr-2 text-blue-600" />
+                                                    Doctor Information
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 text-sm text-gray-600">Name:</div>
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-gray-900">{selectedRecord.doctor.name}</div>
+                                                            {selectedRecord.doctor.specialization && (
+                                                                <div className="text-sm text-gray-600 mt-1">{selectedRecord.doctor.specialization}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {selectedRecord.doctor.hospital && (
+                                                            <div className="flex items-center">
+                                                                <Building2 className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                                                                <span className="text-sm text-gray-900 truncate">{selectedRecord.doctor.hospital}</span>
+                                                            </div>
+                                                        )}
+                                                        {selectedRecord.doctor.email && (
+                                                            <div className="flex items-center">
+                                                                <Mail className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                                                                <span className="text-sm text-gray-900 truncate">{selectedRecord.doctor.email}</span>
+                                                            </div>
+                                                        )}
+                                                        {selectedRecord.doctor.phone && (
+                                                            <div className="flex items-center">
+                                                                <Phone className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+                                                                <span className="text-sm text-gray-900">{selectedRecord.doctor.phone}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Medical Details */}
+                                        <div className="space-y-6">
+                                            {selectedRecord.description && (
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                        <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                                                        Description
+                                                    </h3>
+                                                    <p className="text-gray-700 bg-blue-50/50 p-4 rounded-lg">{selectedRecord.description}</p>
+                                                </div>
+                                            )}
+
+                                            {selectedRecord.diagnosis && (
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                        <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
+                                                        Diagnosis
+                                                    </h3>
+                                                    <div className="bg-red-50/50 p-4 rounded-lg border border-red-100">
+                                                        <p className="text-gray-800">{selectedRecord.diagnosis}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {selectedRecord.treatment && (
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                        <Activity className="w-5 h-5 mr-2 text-green-600" />
+                                                        Treatment Plan
+                                                    </h3>
+                                                    <p className="text-gray-700 bg-green-50/50 p-4 rounded-lg whitespace-pre-line">{selectedRecord.treatment}</p>
+                                                </div>
+                                            )}
+
+                                            {selectedRecord.prescription && (
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                        <Pill className="w-5 h-5 mr-2 text-purple-600" />
+                                                        Prescription
+                                                    </h3>
+                                                    <div className="bg-purple-50/50 p-4 rounded-lg border border-purple-100">
+                                                        <p className="text-gray-800 whitespace-pre-line">{selectedRecord.prescription}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {selectedRecord.notes && (
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                        <ClipboardCheck className="w-5 h-5 mr-2 text-amber-600" />
+                                                        Clinical Notes
+                                                    </h3>
+                                                    <p className="text-gray-700 bg-amber-50/50 p-4 rounded-lg">{selectedRecord.notes}</p>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div>
-                                            <p className="text-sm text-blue-800">Heart Rate</p>
-                                            <p className="text-xl font-bold text-blue-900">
-                                                {records.find(r => r.vitalSigns?.heartRate)?.vitalSigns?.heartRate} BPM
-                                            </p>
+                                    </div>
+
+                                    {/* Right Column - Side Info */}
+                                    <div className="space-y-6">
+                                        {/* Vital Signs Card */}
+                                        {selectedRecord.vitalSigns && Object.keys(selectedRecord.vitalSigns).length > 0 && (
+                                            <div className="bg-white border border-gray-200 rounded-xl p-5">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h3 className="font-semibold text-gray-900 flex items-center">
+                                                        <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+                                                        Vital Signs
+                                                    </h3>
+                                                    <button
+                                                        onClick={() => setExpandedVitals(!expandedVitals)}
+                                                        className="text-blue-600 hover:text-blue-700"
+                                                    >
+                                                        {expandedVitals ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                                    </button>
+                                                </div>
+
+                                                <div className={`grid ${expandedVitals ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                                                    {selectedRecord.vitalSigns.bloodPressure && (
+                                                        <div className={`bg-gray-50 p-3 rounded-lg ${expandedVitals ? '' : 'border-l-4 border-blue-500'}`}>
+                                                            <div className="text-xs text-gray-500 mb-1">Blood Pressure</div>
+                                                            <div className="font-semibold text-gray-900">{selectedRecord.vitalSigns.bloodPressure}</div>
+                                                            <div className="text-xs text-gray-400 mt-1">mmHg</div>
+                                                        </div>
+                                                    )}
+                                                    {selectedRecord.vitalSigns.heartRate && (
+                                                        <div className={`bg-gray-50 p-3 rounded-lg ${expandedVitals ? '' : 'border-l-4 border-red-500'}`}>
+                                                            <div className="text-xs text-gray-500 mb-1">Heart Rate</div>
+                                                            <div className="font-semibold text-gray-900">{selectedRecord.vitalSigns.heartRate} BPM</div>
+                                                            <div className="text-xs text-gray-400 mt-1">Resting</div>
+                                                        </div>
+                                                    )}
+                                                    {expandedVitals && selectedRecord.vitalSigns.temperature && (
+                                                        <div className="bg-gray-50 p-3 rounded-lg">
+                                                            <div className="text-xs text-gray-500 mb-1">Temperature</div>
+                                                            <div className="font-semibold text-gray-900">{selectedRecord.vitalSigns.temperature}°F</div>
+                                                            <div className="text-xs text-gray-400 mt-1">Oral</div>
+                                                        </div>
+                                                    )}
+                                                    {expandedVitals && selectedRecord.vitalSigns.weight && (
+                                                        <div className="bg-gray-50 p-3 rounded-lg">
+                                                            <div className="text-xs text-gray-500 mb-1">Weight</div>
+                                                            <div className="font-semibold text-gray-900">{selectedRecord.vitalSigns.weight} kg</div>
+                                                            <div className="text-xs text-gray-400 mt-1">Body weight</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {!expandedVitals && (selectedRecord.vitalSigns.temperature || selectedRecord.vitalSigns.weight) && (
+                                                    <button
+                                                        onClick={() => setExpandedVitals(true)}
+                                                        className="text-sm text-blue-600 hover:text-blue-700 mt-3 flex items-center"
+                                                    >
+                                                        Show all vital signs
+                                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Attachments Card */}
+                                        {selectedRecord.attachments && selectedRecord.attachments.length > 0 && (
+                                            <div className="bg-white border border-gray-200 rounded-xl p-5">
+                                                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                                                    <FileText className="w-5 h-5 mr-2 text-gray-600" />
+                                                    Attachments ({selectedRecord.attachments.length})
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {selectedRecord.attachments.map((attachment, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
+                                                        >
+                                                            <div className="flex items-center space-x-3 min-w-0">
+                                                                <div className={`w-8 h-8 rounded flex items-center justify-center ${attachment.fileType.includes('pdf') ? 'bg-red-100 text-red-600' :
+                                                                    attachment.fileType.includes('image') ? 'bg-green-100 text-green-600' :
+                                                                        'bg-blue-100 text-blue-600'
+                                                                    }`}>
+                                                                    <FileText className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="text-sm font-medium text-gray-900 truncate">{attachment.fileName}</div>
+                                                                    <div className="text-xs text-gray-500">{attachment.fileType.split('/')[1]?.toUpperCase() || 'FILE'}</div>
+                                                                </div>
+                                                            </div>
+                                                            <a
+                                                                href={attachment.fileUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="p-1 hover:bg-white rounded transition-colors"
+                                                                title="Download"
+                                                            >
+                                                                <Download className="w-4 h-4 text-gray-500 group-hover:text-blue-600" />
+                                                            </a>
+                                                        </div>
+                                                    ))}
+
+                                                    {selectedRecord.attachments.length > 1 && (
+                                                        <button
+                                                            onClick={() => handleDownloadAll(selectedRecord.attachments!)}
+                                                            className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
+                                                        >
+                                                            <Download className="w-4 h-4 mr-2" />
+                                                            Download All Files
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Tags Card */}
+                                        {selectedRecord.tags && selectedRecord.tags.length > 0 && (
+                                            <div className="bg-white border border-gray-200 rounded-xl p-5">
+                                                <h3 className="font-semibold text-gray-900 mb-3">Tags & Categories</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedRecord.tags.map((tag, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors cursor-default"
+                                                        >
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Record Metadata */}
+                                        <div className="bg-gray-50 rounded-xl p-5">
+                                            <h3 className="font-semibold text-gray-900 mb-3">Record Information</h3>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Record ID:</span>
+                                                    <span className="font-mono text-gray-900">{selectedRecord._id.slice(0, 8)}...</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Date Created:</span>
+                                                    <span className="text-gray-900">{formatDateShort(selectedRecord.date)}</span>
+                                                </div>
+                                                {selectedRecord.visitDate && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">Visit Date:</span>
+                                                        <span className="text-gray-900">{formatDateShort(selectedRecord.visitDate)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Status:</span>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${selectedRecord.status === 'active' ? 'bg-green-100 text-green-800' :
+                                                        selectedRecord.status === 'archived' ? 'bg-gray-100 text-gray-800' :
+                                                            'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                        {selectedRecord.status?.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            </div>
 
-                            {records.some(r => r.vitalSigns?.bloodPressure) && (
-                                <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4">
+                            {/* Modal Footer */}
+                            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        onClick={() => setShowDetailModal(false)}
+                                        className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                                    >
+                                        Close
+                                    </button>
                                     <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                                            <Thermometer className="w-5 h-5 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-green-800">Blood Pressure</p>
-                                            <p className="text-xl font-bold text-green-900">
-                                                {records.find(r => r.vitalSigns?.bloodPressure)?.vitalSigns?.bloodPressure}
-                                            </p>
-                                        </div>
+                                        <button
+                                            onClick={handlePrint}
+                                            className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            <Printer className="w-4 h-4" />
+                                            <span>Print</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleShare(selectedRecord)}
+                                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            <Share2 className="w-4 h-4" />
+                                            <span>Share Record</span>
+                                        </button>
                                     </div>
                                 </div>
-                            )}
-
-                            {records.some(r => r.vitalSigns?.temperature) && (
-                                <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                                            <Activity className="w-5 h-5 text-purple-600" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-purple-800">Temperature</p>
-                                            <p className="text-xl font-bold text-purple-900">
-                                                {records.find(r => r.vitalSigns?.temperature)?.vitalSigns?.temperature}°F
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {records.some(r => r.vitalSigns?.weight) && (
-                                <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-xl p-4">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                                            <Stethoscope className="w-5 h-5 text-red-600" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-red-800">Weight</p>
-                                            <p className="text-xl font-bold text-red-900">
-                                                {records.find(r => r.vitalSigns?.weight)?.vitalSigns?.weight} kg
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Detail Modal */}
-            {showDetailModal && selectedRecord && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
-                            <h2 className="text-2xl font-bold text-gray-900">{selectedRecord.title}</h2>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <span className={`text-xs font-medium px-3 py-1 rounded-full ${getRecordColor(selectedRecord.type)}`}>
-                                    {selectedRecord.type}
-                                </span>
-                            </div>
-
-                            {/* Doctor Information */}
-                            {selectedRecord.doctor && (
-                                <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 rounded-xl p-4">
-                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                                        <User className="w-5 h-5 mr-2" />
-                                        Doctor Information
-                                    </h3>
-                                    <div className="space-y-2">
-                                        <div className="flex items-start">
-                                            <span className="text-sm text-gray-600 w-32">Name:</span>
-                                            <span className="text-sm font-medium text-gray-900">{selectedRecord.doctor.name}</span>
-                                        </div>
-                                        {selectedRecord.doctor.specialization && (
-                                            <div className="flex items-start">
-                                                <span className="text-sm text-gray-600 w-32">Specialization:</span>
-                                                <span className="text-sm text-gray-900">{selectedRecord.doctor.specialization}</span>
-                                            </div>
-                                        )}
-                                        {selectedRecord.doctor.hospital && (
-                                            <div className="flex items-start">
-                                                <Building2 className="w-4 h-4 text-gray-400 mr-2 mt-0.5" />
-                                                <span className="text-sm text-gray-900">{selectedRecord.doctor.hospital}</span>
-                                            </div>
-                                        )}
-                                        {selectedRecord.doctor.email && (
-                                            <div className="flex items-start">
-                                                <Mail className="w-4 h-4 text-gray-400 mr-2 mt-0.5" />
-                                                <span className="text-sm text-gray-900">{selectedRecord.doctor.email}</span>
-                                            </div>
-                                        )}
-                                        {selectedRecord.doctor.phone && (
-                                            <div className="flex items-start">
-                                                <Phone className="w-4 h-4 text-gray-400 mr-2 mt-0.5" />
-                                                <span className="text-sm text-gray-900">{selectedRecord.doctor.phone}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedRecord.description && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
-                                    <p className="text-gray-600">{selectedRecord.description}</p>
-                                </div>
-                            )}
-
-                            {selectedRecord.diagnosis && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Diagnosis</h3>
-                                    <p className="text-gray-600">{selectedRecord.diagnosis}</p>
-                                </div>
-                            )}
-
-                            {selectedRecord.treatment && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Treatment</h3>
-                                    <p className="text-gray-600">{selectedRecord.treatment}</p>
-                                </div>
-                            )}
-
-                            {selectedRecord.prescription && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Prescription</h3>
-                                    <p className="text-gray-600 whitespace-pre-line">{selectedRecord.prescription}</p>
-                                </div>
-                            )}
-
-                            {selectedRecord.notes && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Notes</h3>
-                                    <p className="text-gray-600">{selectedRecord.notes}</p>
-                                </div>
-                            )}
-
-                            {selectedRecord.vitalSigns && Object.keys(selectedRecord.vitalSigns).some(key => selectedRecord.vitalSigns![key as keyof VitalSigns]) && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-3">Vital Signs</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {selectedRecord.vitalSigns.bloodPressure && (
-                                            <div className="bg-gray-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-500">Blood Pressure</p>
-                                                <p className="font-semibold">{selectedRecord.vitalSigns.bloodPressure}</p>
-                                            </div>
-                                        )}
-                                        {selectedRecord.vitalSigns.heartRate && (
-                                            <div className="bg-gray-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-500">Heart Rate</p>
-                                                <p className="font-semibold">{selectedRecord.vitalSigns.heartRate} BPM</p>
-                                            </div>
-                                        )}
-                                        {selectedRecord.vitalSigns.temperature && (
-                                            <div className="bg-gray-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-500">Temperature</p>
-                                                <p className="font-semibold">{selectedRecord.vitalSigns.temperature}°F</p>
-                                            </div>
-                                        )}
-                                        {selectedRecord.vitalSigns.weight && (
-                                            <div className="bg-gray-50 p-3 rounded-lg">
-                                                <p className="text-sm text-gray-500">Weight</p>
-                                                <p className="font-semibold">{selectedRecord.vitalSigns.weight} kg</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedRecord.attachments && selectedRecord.attachments.length > 0 && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-3">Attachments</h3>
-                                    <div className="space-y-2">
-                                        {selectedRecord.attachments.map((attachment, index) => (
-                                            <a
-                                                key={index}
-                                                href={attachment.fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                            >
-                                                <div className="flex items-center space-x-3">
-                                                    <FileText className="w-5 h-5 text-gray-600" />
-                                                    <div>
-                                                        <span className="text-sm font-medium text-gray-900 block">{attachment.fileName}</span>
-                                                        <span className="text-xs text-gray-500">{attachment.fileType}</span>
-                                                    </div>
-                                                </div>
-                                                <Download className="w-4 h-4 text-gray-600" />
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedRecord.tags && selectedRecord.tags.length > 0 && (
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-3">Tags</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedRecord.tags.map((tag, index) => (
-                                            <span
-                                                key={index}
-                                                className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="pt-4 border-t border-gray-200">
-                                <div className="flex items-center space-x-4 text-sm text-gray-500">
-                                    <div className="flex items-center">
-                                        <Calendar className="w-4 h-4 mr-2" />
-                                        <span>Record Date: {formatDate(selectedRecord.date)}</span>
-                                    </div>
-                                    {selectedRecord.visitDate && (
-                                        <div className="flex items-center">
-                                            <Calendar className="w-4 h-4 mr-2" />
-                                            <span>Visit Date: {formatDate(selectedRecord.visitDate)}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

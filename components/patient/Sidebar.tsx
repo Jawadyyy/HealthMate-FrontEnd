@@ -9,13 +9,15 @@ interface NavItemProps {
     label: string;
     active?: boolean;
     badge?: number;
+    onClick?: () => void;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active = false, badge }) => (
-    <div
-        className={`flex items-center justify-between px-5 py-3.5 rounded-xl transition-all duration-200 cursor-pointer ${active
-            ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 border border-blue-200/50'
-            : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900'
+const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active = false, badge, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl transition-colors duration-150 outline-none focus:outline-none ${active
+            ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 border border-blue-200/50 pointer-events-none'
+            : 'text-gray-600 hover:bg-gray-50/80 hover:text-gray-900 border border-transparent'
             }`}
     >
         <div className="flex items-center space-x-3.5">
@@ -27,7 +29,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active = false, ba
                 {badge}
             </span>
         )}
-    </div>
+    </button>
 );
 
 const Sidebar = () => {
@@ -62,9 +64,25 @@ const Sidebar = () => {
         };
     }, [isOpen]);
 
-    const handleLogout = () => {
-        // Remove localStorage usage as it's not supported in Claude artifacts
-        router.push('/auth/patient/login');
+    const handleLogout = async () => {
+        try {
+            // Call logout API
+            await fetch('/auth/log-out', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Ensure cookies are sent
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            // Force a full page reload to login page
+            if (typeof window !== 'undefined') {
+                // Clear any cached data
+                window.location.replace('/auth/patient/login');
+            }
+        }
     };
 
     const isActive = (path: string) => pathname.startsWith(path);
@@ -118,27 +136,44 @@ const Sidebar = () => {
                 </div>
 
                 <nav className="px-5 space-y-2 flex-1 overflow-y-auto">
-                    <div onClick={() => router.push('/patient/dashboard')}>
-                        <NavItem icon={User} label="My Profile" active={isActive('/patient/dashboard')} />
-                    </div>
-                    <div onClick={() => router.push('/patient/appointments')}>
-                        <NavItem icon={Calendar} label="Appointments" active={isActive('/patient/appointments')} />
-                    </div>
-                    <div onClick={() => router.push('/patient/payments')}>
-                        <NavItem icon={CreditCard} label="Payments" active={isActive('/patient/payments')} />
-                    </div>
-                    <div onClick={() => router.push('/patient/med-records')}>
-                        <NavItem icon={Settings} label="Medical Records" active={isActive('/patient/med-records')} />
-                    </div>
-                    <div onClick={() => router.push('/patient/prescriptions')}>
-                        <NavItem icon={FileText} label="Prescriptions" active={isActive('/patient/prescriptions')} />
-                    </div>
+                    <NavItem
+                        icon={User}
+                        label="My Profile"
+                        active={isActive('/patient/dashboard')}
+                        onClick={() => router.push('/patient/dashboard')}
+                    />
+                    <NavItem
+                        icon={Calendar}
+                        label="Appointments"
+                        active={isActive('/patient/appointments')}
+                        onClick={() => router.push('/patient/appointments')}
+                    />
+                    <NavItem
+                        icon={CreditCard}
+                        label="Payments"
+                        active={isActive('/patient/payments')}
+                        onClick={() => router.push('/patient/payments')}
+                    />
+                    <NavItem
+                        icon={Settings}
+                        label="Medical Records"
+                        active={isActive('/patient/med-records')}
+                        onClick={() => router.push('/patient/med-records')}
+                    />
+                    <NavItem
+                        icon={FileText}
+                        label="Prescriptions"
+                        active={isActive('/patient/prescriptions')}
+                        onClick={() => router.push('/patient/prescriptions')}
+                    />
                 </nav>
 
                 <div className="p-5 space-y-2 border-t border-gray-200/50">
-                    <div onClick={handleLogout} className="w-full">
-                        <NavItem icon={LogOut} label="Logout" />
-                    </div>
+                    <NavItem
+                        icon={LogOut}
+                        label="Logout"
+                        onClick={handleLogout}
+                    />
                 </div>
             </div>
         </>
