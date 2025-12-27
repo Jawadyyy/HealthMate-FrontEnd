@@ -115,11 +115,11 @@ const AdminDashboard = () => {
       ]);
 
       // Fetch additional analytics data
-      let topDoctorsData = getMockTopDoctors();
-      let diseaseTrendsData = getMockDiseaseTrends();
-      let appointmentsByDateData = getMockAppointmentsByDate();
-      let revenueByMonthData = getMockRevenueByMonth();
-      let patientGrowthData = getMockPatientGrowth();
+      let topDoctorsData: { name: string; specialization: string; appointments: number; revenue: number }[] = [];
+      let diseaseTrendsData: { disease: string; count: number; trend: 'up' | 'down' }[] = [];
+      let appointmentsByDateData: { date: string; count: number }[] = [];
+      let revenueByMonthData: { month: string; revenue: number }[] = [];
+      let patientGrowthData: { month: string; patients: number }[] = [];
 
       try {
         const [topDoctorsRes, diseaseTrendsRes] = await Promise.all([
@@ -128,103 +128,119 @@ const AdminDashboard = () => {
         ]);
 
         if (topDoctorsRes.data && Array.isArray(topDoctorsRes.data)) {
-          topDoctorsData = topDoctorsRes.data.map((doctor: any) => ({
-            name: doctor.name || `Dr. ${doctor._id?.substring(0, 8)}`,
-            specialization: doctor.specialization || 'General',
-            appointments: doctor.appointmentCount || 0,
-            revenue: doctor.revenue || 0
+          topDoctorsData = topDoctorsRes.data.slice(0, 5).map((doctor: any) => ({
+            name: doctor.name || doctor.fullName || `Dr. ${doctor._id?.substring(0, 8) || 'Unknown'}`,
+            specialization: doctor.specialization || doctor.qualification || 'General',
+            appointments: doctor.appointmentCount || doctor.totalAppointments || 0,
+            revenue: doctor.revenue || doctor.totalRevenue || 0
           }));
         }
 
         if (diseaseTrendsRes.data && Array.isArray(diseaseTrendsRes.data)) {
-          diseaseTrendsData = diseaseTrendsRes.data.map((disease: any) => ({
-            disease: disease.disease || 'Unknown',
-            count: disease.count || 0,
-            trend: disease.trend || 'up'
+          diseaseTrendsData = diseaseTrendsRes.data.slice(0, 6).map((disease: any, index: number) => ({
+            disease: disease.disease || disease.name || `Condition ${index + 1}`,
+            count: disease.count || disease.frequency || 0,
+            trend: disease.trend || (index % 2 === 0 ? 'up' : 'down')
           }));
         }
       } catch (e) {
-        console.log("Using mock data for some analytics endpoints");
+        console.log("Error fetching additional analytics:", e);
+        // Use placeholder data when API fails
+        topDoctorsData = getPlaceholderTopDoctors();
+        diseaseTrendsData = getPlaceholderDiseaseTrends();
       }
 
-      // Calculate active appointments and pending approvals from real data if available
-      const activeAppointments = appointmentsRes.data?.active || 
-                                appointmentsRes.data?.current || 
-                                appointmentsRes.data?.today || 
-                                45;
+      // Calculate appointments by date (placeholder - would need specific API)
+      appointmentsByDateData = getPlaceholderAppointmentsByDate();
       
-      const pendingApprovals = doctorsRes.data?.pending || 
-                              doctorsRes.data?.unapproved || 
-                              12;
+      // Calculate revenue by month (placeholder - would need specific API)
+      revenueByMonthData = getPlaceholderRevenueByMonth();
+      
+      // Calculate patient growth (placeholder - would need specific API)
+      patientGrowthData = getPlaceholderPatientGrowth();
+
+      // Calculate active appointments from appointments data
+      const appointmentsData = appointmentsRes.data || {};
+      const activeAppointments = appointmentsData.active || 
+                                appointmentsData.current || 
+                                appointmentsData.today || 
+                                appointmentsData.count || 
+                                0;
+
+      // Get all doctors to find pending approvals
+      const allDoctors = await api.get('/doctors/all');
+      const pendingDoctors = Array.isArray(allDoctors.data) ? 
+        allDoctors.data.filter((doctor: any) => 
+          doctor.status === 'pending' || 
+          doctor.approvalStatus === 'pending' ||
+          !doctor.isApproved
+        ) : [];
+      const pendingApprovals = pendingDoctors.length;
 
       setAnalytics({
         totalPatients: patientsRes.data?.total || patientsRes.data?.count || 0,
         totalDoctors: doctorsRes.data?.total || doctorsRes.data?.count || 0,
         totalAppointments: appointmentsRes.data?.total || appointmentsRes.data?.count || 0,
-        totalRevenue: revenueRes.data?.total || revenueRes.data?.amount || 0,
+        totalRevenue: revenueRes.data?.total || revenueRes.data?.amount || revenueRes.data?.revenue || 0,
         pendingApprovals,
         activeAppointments,
         appointmentsByDate: appointmentsByDateData,
         revenueByMonth: revenueByMonthData,
         patientGrowth: patientGrowthData,
-        topDoctors: topDoctorsData,
-        diseaseTrends: diseaseTrendsData
+        topDoctors: topDoctorsData.length > 0 ? topDoctorsData : getPlaceholderTopDoctors(),
+        diseaseTrends: diseaseTrendsData.length > 0 ? diseaseTrendsData : getPlaceholderDiseaseTrends()
       });
 
     } catch (error) {
       console.error("Error fetching analytics:", error);
-      // Fallback to mock data if API calls fail
-      setAnalytics(getMockAnalytics());
+      // Fallback to placeholder data if API calls fail
+      setAnalytics(getPlaceholderAnalytics());
     }
   };
 
-  const getMockAnalytics = (): AnalyticsData => ({
-    totalPatients: 1250,
-    totalDoctors: 85,
-    totalAppointments: 320,
-    totalRevenue: 45600,
-    pendingApprovals: 12,
-    activeAppointments: 45,
-    appointmentsByDate: getMockAppointmentsByDate(),
-    revenueByMonth: getMockRevenueByMonth(),
-    patientGrowth: getMockPatientGrowth(),
-    topDoctors: getMockTopDoctors(),
-    diseaseTrends: getMockDiseaseTrends()
+  const getPlaceholderAnalytics = (): AnalyticsData => ({
+    totalPatients: 0,
+    totalDoctors: 0,
+    totalAppointments: 0,
+    totalRevenue: 0,
+    pendingApprovals: 0,
+    activeAppointments: 0,
+    appointmentsByDate: getPlaceholderAppointmentsByDate(),
+    revenueByMonth: getPlaceholderRevenueByMonth(),
+    patientGrowth: getPlaceholderPatientGrowth(),
+    topDoctors: getPlaceholderTopDoctors(),
+    diseaseTrends: getPlaceholderDiseaseTrends()
   });
 
-  const getMockAppointmentsByDate = () => [
-    { date: 'Mon', appointments: 42 }, { date: 'Tue', appointments: 58 },
-    { date: 'Wed', appointments: 65 }, { date: 'Thu', appointments: 71 },
-    { date: 'Fri', appointments: 48 }, { date: 'Sat', appointments: 35 },
-    { date: 'Sun', appointments: 28 }
+  const getPlaceholderAppointmentsByDate = () => [
+    { date: 'Mon', count: 0 }, { date: 'Tue', count: 0 },
+    { date: 'Wed', count: 0 }, { date: 'Thu', count: 0 },
+    { date: 'Fri', count: 0 }, { date: 'Sat', count: 0 },
+    { date: 'Sun', count: 0 }
   ];
 
-  const getMockRevenueByMonth = () => [
-    { month: 'Jan', revenue: 45000 }, { month: 'Feb', revenue: 52000 },
-    { month: 'Mar', revenue: 48000 }, { month: 'Apr', revenue: 61000 },
-    { month: 'May', revenue: 59000 }, { month: 'Jun', revenue: 68000 }
+  const getPlaceholderRevenueByMonth = () => [
+    { month: 'Jan', revenue: 0 }, { month: 'Feb', revenue: 0 },
+    { month: 'Mar', revenue: 0 }, { month: 'Apr', revenue: 0 },
+    { month: 'May', revenue: 0 }, { month: 'Jun', revenue: 0 }
   ];
 
-  const getMockPatientGrowth = () => [
-    { month: 'Jan', patients: 850 }, { month: 'Feb', patients: 920 },
-    { month: 'Mar', patients: 1050 }, { month: 'Apr', patients: 1120 },
-    { month: 'May', patients: 1250 }, { month: 'Jun', patients: 1380 }
+  const getPlaceholderPatientGrowth = () => [
+    { month: 'Jan', patients: 0 }, { month: 'Feb', patients: 0 },
+    { month: 'Mar', patients: 0 }, { month: 'Apr', patients: 0 },
+    { month: 'May', patients: 0 }, { month: 'Jun', patients: 0 }
   ];
 
-  const getMockTopDoctors = () => [
-    { name: 'Dr. Robert Wilson', specialization: 'Cardiology', appointments: 156, revenue: 12500 },
-    { name: 'Dr. Emily Davis', specialization: 'Pediatrics', appointments: 142, revenue: 9800 },
-    { name: 'Dr. Michael Brown', specialization: 'Orthopedics', appointments: 128, revenue: 11200 },
-    { name: 'Dr. Sarah Johnson', specialization: 'Neurology', appointments: 115, revenue: 10500 },
-    { name: 'Dr. James Miller', specialization: 'Dermatology', appointments: 98, revenue: 8600 }
+  const getPlaceholderTopDoctors = () => [
+    { name: 'No data available', specialization: 'N/A', appointments: 0, revenue: 0 },
+    { name: 'Waiting for data...', specialization: 'N/A', appointments: 0, revenue: 0 },
+    { name: 'Check back soon', specialization: 'N/A', appointments: 0, revenue: 0 }
   ];
 
-  const getMockDiseaseTrends = () => [
-    { disease: 'Diabetes', count: 156, trend: 'up' },
-    { disease: 'Hypertension', count: 142, trend: 'up' },
-    { disease: 'Arthritis', count: 128, trend: 'down' },
-    { disease: 'Asthma', count: 115, trend: 'up' },
-    { disease: 'Migraine', count: 98, trend: 'down' }
+  const getPlaceholderDiseaseTrends = () => [
+    { disease: 'No data available', count: 0, trend: 'up' },
+    { disease: 'Waiting for data...', count: 0, trend: 'down' },
+    { disease: 'Check back soon', count: 0, trend: 'up' }
   ];
 
   // Helper function to export analytics data
@@ -353,12 +369,12 @@ const ActionButton: React.FC<{
 const StatsGrid: React.FC<{ analytics: AnalyticsData }> = ({ analytics }) => (
   <div className="px-8 pb-6">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-      <StatCard icon={UserPlus} label="Total Patients" value={analytics.totalPatients} change="+12%" color="purple" />
-      <StatCard icon={Stethoscope} label="Total Doctors" value={analytics.totalDoctors} change="+5%" color="green" />
-      <StatCard icon={Calendar} label="Active Appointments" value={analytics.activeAppointments} change="+8" color="blue" />
-      <StatCard icon={CreditCard} label="Total Revenue" value={`$${analytics.totalRevenue.toLocaleString()}`} change="+15%" color="orange" />
-      <StatCard icon={UserCheck} label="Pending Approvals" value={analytics.pendingApprovals} change="-3" color="yellow" />
-      <StatCard icon={Activity} label="System Health" value="98%" change="+2%" color="purple" />
+      <StatCard icon={UserPlus} label="Total Patients" value={analytics.totalPatients || 0} change={analytics.totalPatients > 0 ? "+0%" : "No data"} color="purple" />
+      <StatCard icon={Stethoscope} label="Total Doctors" value={analytics.totalDoctors || 0} change={analytics.totalDoctors > 0 ? "+0%" : "No data"} color="green" />
+      <StatCard icon={Calendar} label="Active Appointments" value={analytics.activeAppointments || 0} change={analytics.activeAppointments > 0 ? "+0" : "No data"} color="blue" />
+      <StatCard icon={CreditCard} label="Total Revenue" value={`$${(analytics.totalRevenue || 0).toLocaleString()}`} change={analytics.totalRevenue > 0 ? "+0%" : "No data"} color="orange" />
+      <StatCard icon={UserCheck} label="Pending Approvals" value={analytics.pendingApprovals || 0} change={analytics.pendingApprovals > 0 ? "+0" : "No data"} color="yellow" />
+      <StatCard icon={Activity} label="System Health" value="100%" change="+0%" color="purple" />
     </div>
   </div>
 );
@@ -384,7 +400,7 @@ const StatCard: React.FC<{
         <div>
           <p className="text-sm font-medium text-gray-600">{label}</p>
           <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
-          <p className={`text-xs font-medium mt-2 ${change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-xs font-medium mt-2 ${change.includes('+') ? 'text-green-600' : change.includes('No') ? 'text-gray-500' : 'text-red-600'}`}>
             {change} from last month
           </p>
         </div>
@@ -406,7 +422,7 @@ const ChartsGrid: React.FC<{ analytics: AnalyticsData }> = ({ analytics }) => (
             <XAxis dataKey="date" stroke="#6b7280" />
             <YAxis stroke="#6b7280" />
             <Tooltip contentStyle={chartTooltipStyle} />
-            <Bar dataKey="appointments" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Appointments" />
+            <Bar dataKey="count" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Appointments" />
           </BarChart>
         </ResponsiveContainer>
       </ChartContainer>

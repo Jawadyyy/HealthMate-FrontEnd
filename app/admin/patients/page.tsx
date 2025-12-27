@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
-// Types
+// Types (unchanged)
 interface Patient {
   _id: string; name: string; email: string; phone: string; dateOfBirth: string;
   gender: 'male' | 'female' | 'other'; bloodGroup: string; address: string; 
@@ -43,6 +43,38 @@ interface MedicalRecord {
   medications: string[]; notes: string; followupDate?: string;
 }
 
+const calculateAge = (dateOfBirth: string): number => {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+};
+
+// API URLs - Updated to match provided API structure
+const PATIENTS_API = {
+  ALL: '/patients/all',
+  CREATE: '/patients/create',
+  UPDATE: '/patients/update',
+  DELETE: (id: string) => `/patients/${id}`,
+  GET_ONE: (id: string) => `/patients/${id}`,
+  MY_PROFILE: '/patients/me'
+};
+
+const ANALYTICS_API = {
+  TOTAL_PATIENTS: '/analytics/total-patients'
+};
+
+const APPOINTMENTS_API = {
+  MY_APPOINTMENTS: '/appointments/my',
+  BOOK: '/appointments/book'
+};
+
+const MEDICAL_RECORDS_API = {
+  PATIENT_RECORDS: (patientId: string) => `/medical-records/patient/${patientId}`
+};
+
 // Main Component
 const PatientsModule = () => {
   const router = useRouter();
@@ -67,13 +99,13 @@ const PatientsModule = () => {
   const loadPatients = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/patients/all');
+      const response = await api.get(PATIENTS_API.ALL);
       let patientsData: Patient[] = [];
       if (response.data && Array.isArray(response.data)) {
         patientsData = response.data.map((patient: any) => ({
-          _id: patient._id || patient.id,
-          name: patient.name || `${patient.firstName || ''} ${patient.lastName || ''}`.trim(),
-          email: patient.email || '',
+          _id: patient._id || patient.id || '',
+          name: patient.name || `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unnamed Patient',
+          email: patient.email || 'No email',
           phone: patient.phone || patient.contactNumber || '',
           dateOfBirth: patient.dateOfBirth || patient.dob || new Date().toISOString(),
           gender: patient.gender || 'other',
@@ -99,8 +131,8 @@ const PatientsModule = () => {
       setFilteredPatients(patientsData);
     } catch (error) {
       console.error('Error loading patients:', error);
-      setPatients(MOCK_PATIENTS);
-      setFilteredPatients(MOCK_PATIENTS);
+      setPatients([]);
+      setFilteredPatients([]);
     } finally {
       setLoading(false);
     }
@@ -108,8 +140,10 @@ const PatientsModule = () => {
 
   const loadPatientStats = async () => {
     try {
-      const response = await api.get('/analytics/total-patients');
-      if (response.data) setStats(response.data);
+      const response = await api.get(ANALYTICS_API.TOTAL_PATIENTS);
+      if (response.data) {
+        setStats(response.data);
+      }
     } catch (error) {
       console.error('Error loading patient stats:', error);
     }
@@ -118,39 +152,93 @@ const PatientsModule = () => {
   const loadPatientDetails = async (patientId: string) => {
     try {
       const [patientRes, appointmentsRes, medicalRecordsRes] = await Promise.all([
-        api.get(`/patients/${patientId}`),
-        api.get(`/appointments/my`),
-        api.get(`/medical-records/patient/${patientId}`)
+        api.get(PATIENTS_API.GET_ONE(patientId)),
+        api.get(APPOINTMENTS_API.MY_APPOINTMENTS),
+        api.get(MEDICAL_RECORDS_API.PATIENT_RECORDS(patientId))
       ]);
-      const patientData = patientRes.data.data || patientRes.data;
+      
+      // Ensure we get the patient data correctly
+      let patientData = patientRes.data;
+      
+      // Handle different API response structures
+      if (patientData?.data) {
+        patientData = patientData.data;
+      }
+      
+      if (!patientData) {
+        patientData = {
+          _id: patientId,
+          name: 'Unknown Patient',
+          email: 'No email',
+          phone: 'No phone',
+          dateOfBirth: new Date().toISOString(),
+          gender: 'other',
+          bloodGroup: 'Unknown',
+          address: 'Not provided',
+          emergencyContact: 'Not provided',
+          medicalConditions: [],
+          lastVisit: new Date().toISOString(),
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          age: 0
+        };
+      }
+      
       setSelectedPatient(patientData);
-      if (appointmentsRes.data && Array.isArray(appointmentsRes.data)) setPatientAppointments(appointmentsRes.data);
-      if (medicalRecordsRes.data && Array.isArray(medicalRecordsRes.data)) setPatientMedicalRecords(medicalRecordsRes.data);
+      
+      // Filter appointments for this specific patient
+      if (appointmentsRes.data && Array.isArray(appointmentsRes.data)) {
+        const patientAppointments = appointmentsRes.data.filter(
+          (appt: any) => appt.patientId === patientId
+        );
+        setPatientAppointments(patientAppointments);
+      } else {
+        setPatientAppointments([]);
+      }
+      
+      if (medicalRecordsRes.data && Array.isArray(medicalRecordsRes.data)) {
+        setPatientMedicalRecords(medicalRecordsRes.data);
+      } else {
+        setPatientMedicalRecords([]);
+      }
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error('Error loading patient details:', error);
+      // Create a fallback patient object if the API call fails
+      setSelectedPatient({
+        _id: patientId,
+        name: 'Unknown Patient',
+        email: 'No email',
+        phone: 'No phone',
+        dateOfBirth: new Date().toISOString(),
+        gender: 'other',
+        bloodGroup: 'Unknown',
+        address: 'Not provided',
+        emergencyContact: 'Not provided',
+        medicalConditions: [],
+        lastVisit: new Date().toISOString(),
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        age: 0
+      });
+      setPatientAppointments([]);
+      setPatientMedicalRecords([]);
+      setIsDetailModalOpen(true);
     }
-  };
-
-  const calculateAge = (dateOfBirth: string): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age;
   };
 
   const handleAddPatient = async (patientData: any) => {
     try {
-      const response = await api.post('/patients/create', patientData);
+      const response = await api.post(PATIENTS_API.CREATE, patientData);
       if (response.data) {
         const newPatient: Patient = {
-          _id: response.data.id || response.data._id,
-          name: response.data.name,
-          email: response.data.email,
-          phone: response.data.phone,
-          dateOfBirth: response.data.dateOfBirth,
+          _id: response.data.id || response.data._id || Date.now().toString(),
+          name: response.data.name || 'New Patient',
+          email: response.data.email || '',
+          phone: response.data.phone || '',
+          dateOfBirth: response.data.dateOfBirth || new Date().toISOString(),
           gender: response.data.gender || 'other',
           bloodGroup: response.data.bloodGroup || 'Unknown',
           address: response.data.address || '',
@@ -174,9 +262,14 @@ const PatientsModule = () => {
 
   const handleUpdatePatient = async (patientId: string, updateData: any) => {
     try {
-      const response = await api.patch('/patients/update', { id: patientId, ...updateData });
+      const response = await api.patch(PATIENTS_API.UPDATE, { 
+        id: patientId, 
+        ...updateData 
+      });
       if (response.data) {
-        setPatients(patients.map(patient => patient._id === patientId ? { ...patient, ...updateData } : patient));
+        setPatients(patients.map(patient => 
+          patient._id === patientId ? { ...patient, ...updateData } : patient
+        ));
         setIsEditModalOpen(false);
       }
     } catch (error) {
@@ -188,7 +281,7 @@ const PatientsModule = () => {
   const handleDeletePatient = async (patientId: string) => {
     if (confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
       try {
-        await api.delete(`/patients/${patientId}`);
+        await api.delete(PATIENTS_API.DELETE(patientId));
         setPatients(patients.filter(patient => patient._id !== patientId));
         loadPatientStats();
       } catch (error) {
@@ -200,7 +293,10 @@ const PatientsModule = () => {
 
   const handleExportPatients = async () => {
     try {
-      const response = await api.get('/patients/all', { params: { format: 'csv' }, responseType: 'blob' });
+      const response = await api.get(PATIENTS_API.ALL, { 
+        params: { format: 'csv' }, 
+        responseType: 'blob' 
+      });
       const blob = new Blob([response.data], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -218,7 +314,11 @@ const PatientsModule = () => {
 
   const handleScheduleAppointment = async (patientId: string, appointmentData: any) => {
     try {
-      await api.post('/appointments/book', { ...appointmentData, patientId, status: 'scheduled' });
+      await api.post(APPOINTMENTS_API.BOOK, { 
+        ...appointmentData, 
+        patientId, 
+        status: 'scheduled' 
+      });
       alert('Appointment scheduled successfully!');
     } catch (error) {
       console.error('Error scheduling appointment:', error);
@@ -260,10 +360,24 @@ const PatientsModule = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
 
   const getStatusColor = (status: Patient['status']) => {
-    const colors = { active: 'bg-green-100 text-green-700', inactive: 'bg-gray-100 text-gray-700', pending: 'bg-yellow-100 text-yellow-700' };
+    const colors = { 
+      active: 'bg-green-100 text-green-700', 
+      inactive: 'bg-gray-100 text-gray-700', 
+      pending: 'bg-yellow-100 text-yellow-700' 
+    };
     return colors[status];
   };
 
@@ -281,18 +395,6 @@ const PatientsModule = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentPatients = filteredPatients.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
-
-  const MOCK_PATIENTS: Patient[] = [
-    {
-      _id: 'p001', name: 'John Smith', email: 'john.smith@email.com', phone: '+1 (555) 123-4567',
-      dateOfBirth: '1985-03-15', gender: 'male', bloodGroup: 'O+',
-      address: '123 Main St, New York, NY 10001', emergencyContact: '+1 (555) 987-6543 (Jane Smith)',
-      medicalConditions: ['Hypertension', 'Diabetes Type 2'], lastVisit: '2024-01-15',
-      status: 'active', createdAt: '2023-05-20', updatedAt: '2024-01-15',
-      age: 38, upcomingAppointments: 2, totalVisits: 12
-    },
-    // ... (rest of mock data)
-  ];
 
   if (loading && !patients.length) return <LoadingScreen message="Loading patients..." />;
 
@@ -373,7 +475,7 @@ const PatientsModule = () => {
             {currentPatients.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {currentPatients.map((patient) => (
-                  <PatientCard key={patient._id} patient={patient} onView={() => loadPatientDetails(patient._id)} onEdit={() => { setSelectedPatient(patient); setIsEditModalOpen(true); }} onDelete={() => handleDeletePatient(patient._id)} formatDate={formatDate} getStatusColor={getStatusColor} getBloodGroupColor={getBloodGroupColor} />
+                  <PatientCard key={patient._id} patient={patient} onView={() => loadPatientDetails(patient._id)} onEdit={() => { setSelectedPatient(patient); setIsEditModalOpen(true); }} onDelete={() => handleDeletePatient(patient._id)} formatDate={formatDate} getStatusColor={getStatusColor} getBloodGroupColor={getBloodGroupColor} calculateAge={calculateAge}  />
                 ))}
               </div>
             ) : (
@@ -414,8 +516,8 @@ const PatientsModule = () => {
 const PatientCard: React.FC<{
   patient: Patient; onView: () => void; onEdit: () => void; onDelete: () => void;
   formatDate: (date: string) => string; getStatusColor: (status: 'active' | 'inactive' | 'pending') => string;
-  getBloodGroupColor: (bloodGroup: string) => string;
-}> = ({ patient, onView, onEdit, onDelete, formatDate, getStatusColor, getBloodGroupColor }) => (
+  getBloodGroupColor: (bloodGroup: string) => string; calculateAge: (dateOfBirth: string) => number;
+}> = ({ patient, onView, onEdit, onDelete, formatDate, getStatusColor, getBloodGroupColor, calculateAge }) => (
   <div className="bg-white border border-gray-200/50 rounded-2xl p-5 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group">
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center space-x-3">
@@ -460,15 +562,6 @@ const PatientCard: React.FC<{
     </div>
   </div>
 );
-
-const calculateAge = (dateOfBirth: string): number => {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
-  return age;
-};
 
 // Stats Card Component
 const StatCard: React.FC<{
@@ -539,6 +632,12 @@ const PatientDetailModal: React.FC<{
     onScheduleAppointment(patient._id, appointmentData);
   };
 
+  // Safely get status text
+  const getStatusText = (status: string | undefined | null) => {
+    if (!status) return 'Unknown';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300" onClick={onClose} />
@@ -546,12 +645,21 @@ const PatientDetailModal: React.FC<{
         <div className="p-8">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">{patient.name.charAt(0)}</div>
-              <div><h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">{patient?.name?.charAt(0) || 'P'}</div>
+              <div><h2 className="text-2xl font-bold text-gray-900">{patient?.name || 'Unknown Patient'}</h2>
                 <div className="flex items-center space-x-3 mt-2">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(patient.status)}`}>{patient.status === 'active' && <CheckCircle className="w-4 h-4 mr-1" />}{patient.status === 'pending' && <AlertCircle className="w-4 h-4 mr-1" />}{patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}</span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>{patient.bloodGroup}</span>
-                  <span className="text-sm text-gray-600">{patient.gender === 'male' ? 'Male' : patient.gender === 'female' ? 'Female' : 'Other'} • {patient.age || calculateAge(patient.dateOfBirth)} years</span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(patient?.status as any || 'active')}`}>
+                    {patient?.status === 'active' && <CheckCircle className="w-4 h-4 mr-1" />}
+                    {patient?.status === 'pending' && <AlertCircle className="w-4 h-4 mr-1" />}
+                    {getStatusText(patient?.status)}
+                  </span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getBloodGroupColor(patient?.bloodGroup || 'Unknown')}`}>
+                    {patient?.bloodGroup || 'Unknown'}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    {patient?.gender === 'male' ? 'Male' : patient?.gender === 'female' ? 'Female' : 'Other'} • 
+                    {patient?.age || (patient?.dateOfBirth ? calculateAge(patient.dateOfBirth) : 'N/A')} years
+                  </span>
                 </div>
               </div>
             </div>
@@ -563,13 +671,13 @@ const PatientDetailModal: React.FC<{
             <div className="bg-gray-50/50 border border-gray-200/50 rounded-xl p-5">
               <h3 className="font-medium text-gray-900 mb-4 flex items-center"><User className="w-5 h-5 mr-2 text-purple-600" />Personal Information</h3>
               <div className="space-y-3">
-                <DetailRow label="Email" value={patient.email} icon={Mail} />
-                <DetailRow label="Phone" value={patient.phone} icon={Phone} />
-                <DetailRow label="Date of Birth" value={`${formatDate(patient.dateOfBirth)} (${patient.age || calculateAge(patient.dateOfBirth)} years)`} />
-                <DetailRow label="Address" value={patient.address} icon={MapPin} />
-                <DetailRow label="Emergency Contact" value={patient.emergencyContact} icon={Phone} />
-                {patient.occupation && <DetailRow label="Occupation" value={patient.occupation} />}
-                {patient.maritalStatus && <DetailRow label="Marital Status" value={patient.maritalStatus} />}
+                <DetailRow label="Email" value={patient?.email || 'No email'} icon={Mail} />
+                <DetailRow label="Phone" value={patient?.phone || 'No phone'} icon={Phone} />
+                <DetailRow label="Date of Birth" value={patient?.dateOfBirth ? `${formatDate(patient.dateOfBirth)} (${patient.age || calculateAge(patient.dateOfBirth)} years)` : 'Not provided'} />
+                <DetailRow label="Address" value={patient?.address || 'Not provided'} icon={MapPin} />
+                <DetailRow label="Emergency Contact" value={patient?.emergencyContact || 'Not provided'} icon={Phone} />
+                {patient?.occupation && <DetailRow label="Occupation" value={patient.occupation} />}
+                {patient?.maritalStatus && <DetailRow label="Marital Status" value={patient.maritalStatus} />}
               </div>
             </div>
 
@@ -579,19 +687,26 @@ const PatientDetailModal: React.FC<{
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b border-gray-200/50">
                   <span className="text-sm text-gray-600">Blood Group</span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBloodGroupColor(patient.bloodGroup)}`}>{patient.bloodGroup}</span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBloodGroupColor(patient?.bloodGroup || 'Unknown')}`}>
+                    {patient?.bloodGroup || 'Unknown'}
+                  </span>
                 </div>
                 <div><p className="text-sm text-gray-600 mb-2">Medical Conditions</p>
                   <div className="flex flex-wrap gap-2">
-                    {patient.medicalConditions.length > 0 ? patient.medicalConditions.map((condition, index) => <span key={index} className="text-sm bg-red-100 text-red-600 px-3 py-1.5 rounded-lg">{condition}</span>) : <span className="text-gray-400">No conditions recorded</span>}
+                    {patient?.medicalConditions && patient.medicalConditions.length > 0 ? 
+                      patient.medicalConditions.map((condition, index) => 
+                        <span key={index} className="text-sm bg-red-100 text-red-600 px-3 py-1.5 rounded-lg">{condition}</span>
+                      ) : 
+                      <span className="text-gray-400">No conditions recorded</span>
+                    }
                   </div>
                 </div>
-                {patient.allergies && patient.allergies.length > 0 && <div><p className="text-sm text-gray-600 mb-2">Allergies</p>
+                {patient?.allergies && patient.allergies.length > 0 && <div><p className="text-sm text-gray-600 mb-2">Allergies</p>
                   <div className="flex flex-wrap gap-2">{patient.allergies.map((allergy, index) => <span key={index} className="text-sm bg-yellow-100 text-yellow-600 px-3 py-1.5 rounded-lg">{allergy}</span>)}</div>
                 </div>}
-                <DetailRow label="Last Visit" value={formatDate(patient.lastVisit)} icon={Calendar} />
-                <DetailRow label="Member Since" value={formatDate(patient.createdAt)} />
-                {patient.insuranceProvider && <DetailRow label="Insurance" value={`${patient.insuranceProvider} (${patient.insuranceId})`} />}
+                <DetailRow label="Last Visit" value={patient?.lastVisit ? formatDate(patient.lastVisit) : 'No visits yet'} icon={Calendar} />
+                <DetailRow label="Member Since" value={patient?.createdAt ? formatDate(patient.createdAt) : 'Unknown'} />
+                {patient?.insuranceProvider && <DetailRow label="Insurance" value={`${patient.insuranceProvider} (${patient.insuranceId || 'No ID'})`} />}
               </div>
             </div>
 
@@ -650,7 +765,7 @@ const DetailRow: React.FC<{ label: string; value: string; icon?: React.ElementTy
   </div>
 );
 
-// Add Patient Modal
+// Add Patient Modal with scrolling form
 const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: any) => void; }> = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', dateOfBirth: '', gender: 'other', bloodGroup: 'O+',
@@ -673,41 +788,200 @@ const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: a
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300" onClick={onClose} />
-      <div className="relative w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl p-6">
-          <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-gray-900">Add New Patient</h2><button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><XCircleIcon className="w-5 h-5 text-gray-500" /></button></div>
+      <div className="relative w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Add New Patient</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
+              <XCircleIcon className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="John Smith" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="john@example.com" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="+1 (555) 123-4567" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label><input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-              <select name="gender" value={formData.gender} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
-              </select>
+        
+        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                <input 
+                  type="text" 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="John Smith" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input 
+                  type="email" 
+                  name="email" 
+                  value={formData.email} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="john@example.com" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="+1 (555) 123-4567" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                <input 
+                  type="date" 
+                  name="dateOfBirth" 
+                  value={formData.dateOfBirth} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                <select 
+                  name="gender" 
+                  value={formData.gender} 
+                  onChange={handleChange} 
+                  required 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
+                <select 
+                  name="bloodGroup" 
+                  value={formData.bloodGroup} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="Unknown">Unknown</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea 
+                  name="address" 
+                  value={formData.address} 
+                  onChange={handleChange} 
+                  rows={2} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="123 Main St, City, State, ZIP" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                <input 
+                  type="tel" 
+                  name="emergencyContact" 
+                  value={formData.emergencyContact} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="+1 (555) 987-6543 (Jane Smith)" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Medical Conditions</label>
+                <input 
+                  type="text" 
+                  name="medicalConditions" 
+                  value={formData.medicalConditions} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="Hypertension, Diabetes (comma separated)" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
+                <input 
+                  type="text" 
+                  name="occupation" 
+                  value={formData.occupation} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="Software Engineer" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
+                <select 
+                  name="maritalStatus" 
+                  value={formData.maritalStatus} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="single">Single</option>
+                  <option value="married">Married</option>
+                  <option value="divorced">Divorced</option>
+                  <option value="widowed">Widowed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label>
+                <input 
+                  type="text" 
+                  name="insuranceProvider" 
+                  value={formData.insuranceProvider} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="ABC Insurance" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Insurance ID</label>
+                <input 
+                  type="text" 
+                  name="insuranceId" 
+                  value={formData.insuranceId} 
+                  onChange={handleChange} 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                  placeholder="INS123456" 
+                />
+              </div>
             </div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
-              <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="O+">O+</option><option value="O-">O-</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="Unknown">Unknown</option>
-              </select>
+            
+            <div className="sticky bottom-0 bg-white pt-6 mt-4 border-t border-gray-200">
+              <div className="flex justify-end space-x-3">
+                <button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg border border-gray-300 transition-all duration-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 cursor-pointer"
+                >
+                  Add Patient
+                </button>
+              </div>
             </div>
-            <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Address</label><textarea name="address" value={formData.address} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="123 Main St, City, State, ZIP" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label><input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="+1 (555) 987-6543 (Jane Smith)" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Medical Conditions</label><input type="text" name="medicalConditions" value={formData.medicalConditions} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Hypertension, Diabetes (comma separated)" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Occupation</label><input type="text" name="occupation" value={formData.occupation} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Software Engineer" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
-              <select name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="single">Single</option><option value="married">Married</option><option value="divorced">Divorced</option><option value="widowed">Widowed</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex justify-end space-x-3 mt-6">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200">Add Patient</button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -757,7 +1031,22 @@ const EditPatientModal: React.FC<{ patient: Patient; onClose: () => void; onSubm
                 <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
               </select>
             </div>
-            {/* ... rest of form fields (similar structure) */}
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
+              <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="O+">O+</option><option value="O-">O-</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="Unknown">Unknown</option>
+              </select>
+            </div>
+            <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Address</label><textarea name="address" value={formData.address} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label><input type="tel" name="emergencyContact" value={formData.emergencyContact} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Medical Conditions</label><input type="text" name="medicalConditions" value={formData.medicalConditions} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Hypertension, Diabetes (comma separated)" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Occupation</label><input type="text" name="occupation" value={formData.occupation} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
+              <select name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="single">Single</option><option value="married">Married</option><option value="divorced">Divorced</option><option value="widowed">Widowed</option>
+              </select>
+            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Insurance Provider</label><input type="text" name="insuranceProvider" value={formData.insuranceProvider} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Insurance ID</label><input type="text" name="insuranceId" value={formData.insuranceId} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" /></div>
           </div>
           <div className="flex justify-end space-x-3 mt-6">
             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200">Cancel</button>
