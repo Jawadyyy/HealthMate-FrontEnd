@@ -9,7 +9,6 @@ import styles from "./auth.module.css";
 import PatientLoginPage from "./patient/login/page";
 import PatientSignupPage from "./patient/signup/page";
 import DoctorLoginPage from "./doctor/login/page";
-import DoctorSignupPage from "./doctor/signup/page";
 import AdminLoginPage from "./admin/login/page";
 
 type Role = "patient" | "doctor" | "admin";
@@ -54,7 +53,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const panels =
     currentRole === "patient"
       ? [<PatientLoginPage key="login" />, <PatientSignupPage key="signup" />]
-      : [<DoctorLoginPage key="login" />, <DoctorSignupPage key="signup" />];
+      : [<DoctorLoginPage key="login" />];
 
   const sliderStyle: React.CSSProperties = {
     transform: currentView === "signup" ? "translateX(-50%)" : "translateX(0%)"
