@@ -57,7 +57,7 @@ const MedicalRecordsPage = () => {
     const [records, setRecords] = useState<MedicalRecord[]>([]);
     const [filteredRecords, setFilteredRecords] = useState<MedicalRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'consultation' | 'prescription' | 'lab-report' | 'diagnosis'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'consultation' | 'lab-report' | 'diagnosis'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -114,80 +114,6 @@ const MedicalRecordsPage = () => {
             setRecords(transformedRecords);
         } catch (error) {
             console.error('Error fetching medical records:', error);
-            // Fallback to existing mock data structure
-            setRecords([
-                {
-                    _id: '1',
-                    type: 'prescription',
-                    title: 'Antibiotics Prescription',
-                    date: '2024-01-15',
-                    description: 'For bacterial infection treatment',
-                    prescription: 'Amoxicillin 500mg - Take 3 times daily for 7 days',
-                    tags: ['Antibiotics', 'Infection', '7 days'],
-                    status: 'active',
-                    vitalSigns: {
-                        temperature: 98.6,
-                        bloodPressure: '120/80'
-                    },
-                    doctor: {
-                        _id: 'doc1',
-                        name: 'Dr. Smith Johnson',
-                        email: 'smith.johnson@hospital.com',
-                        phone: '+1 234-567-8900',
-                        specialization: 'General Medicine',
-                        hospital: 'City General Hospital'
-                    }
-                },
-                {
-                    _id: '2',
-                    type: 'lab-report',
-                    title: 'Blood Test Results',
-                    date: '2024-01-10',
-                    description: 'Complete blood count and lipid profile',
-                    tags: ['Blood Test', 'CBC', 'Lipid Profile'],
-                    status: 'active',
-                    attachments: [
-                        {
-                            fileName: 'blood-test-results.pdf',
-                            fileUrl: '#',
-                            fileType: 'application/pdf'
-                        }
-                    ],
-                    doctor: {
-                        _id: 'doc2',
-                        name: 'Dr. Emma Wilson',
-                        email: 'emma.wilson@hospital.com',
-                        specialization: 'Pathology',
-                        hospital: 'City General Hospital'
-                    }
-                },
-                {
-                    _id: '3',
-                    type: 'consultation',
-                    title: 'Annual Checkup',
-                    date: '2024-01-05',
-                    description: 'Routine annual physical examination',
-                    diagnosis: 'Overall good health',
-                    treatment: 'Continue current lifestyle',
-                    notes: 'Patient advised to maintain regular exercise and balanced diet',
-                    tags: ['Checkup', 'Physical', 'Routine'],
-                    status: 'active',
-                    vitalSigns: {
-                        bloodPressure: '118/76',
-                        heartRate: 72,
-                        temperature: 98.2,
-                        weight: 68
-                    },
-                    doctor: {
-                        _id: 'doc3',
-                        name: 'Dr. Michael Chen',
-                        email: 'michael.chen@hospital.com',
-                        phone: '+1 234-567-8901',
-                        specialization: 'Family Medicine',
-                        hospital: 'City General Hospital'
-                    }
-                }
-            ]);
         } finally {
             setLoading(false);
         }
@@ -215,7 +141,6 @@ const MedicalRecordsPage = () => {
 
     const getRecordIcon = (type: string) => {
         switch (type) {
-            case 'prescription': return <Pill className="w-5 h-5" />;
             case 'lab-report': return <Activity className="w-5 h-5" />;
             case 'diagnosis': return <Stethoscope className="w-5 h-5" />;
             case 'consultation': return <FileCheck className="w-5 h-5" />;
@@ -226,7 +151,6 @@ const MedicalRecordsPage = () => {
 
     const getRecordColor = (type: string) => {
         switch (type) {
-            case 'prescription': return 'bg-blue-50 text-blue-700 border-blue-200';
             case 'lab-report': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
             case 'diagnosis': return 'bg-purple-50 text-purple-700 border-purple-200';
             case 'consultation': return 'bg-amber-50 text-amber-700 border-amber-200';
@@ -237,7 +161,6 @@ const MedicalRecordsPage = () => {
 
     const getPriorityBadge = (type: string) => {
         switch (type) {
-            case 'prescription': return { label: 'Active', color: 'bg-blue-100 text-blue-800' };
             case 'lab-report': return { label: 'Reviewed', color: 'bg-emerald-100 text-emerald-800' };
             case 'diagnosis': return { label: 'Critical', color: 'bg-red-100 text-red-800' };
             default: return { label: 'Active', color: 'bg-gray-100 text-gray-800' };
@@ -327,7 +250,7 @@ const MedicalRecordsPage = () => {
                     </div>
 
                     {/* Stats Summary */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -335,17 +258,6 @@ const MedicalRecordsPage = () => {
                                     <p className="text-2xl font-bold text-gray-900">{records.length}</p>
                                 </div>
                                 <FileText className="w-8 h-8 text-blue-600" />
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Prescriptions</p>
-                                    <p className="text-2xl font-bold text-gray-900">
-                                        {records.filter(r => r.type === 'prescription').length}
-                                    </p>
-                                </div>
-                                <Pill className="w-8 h-8 text-blue-600" />
                             </div>
                         </div>
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
@@ -391,7 +303,7 @@ const MedicalRecordsPage = () => {
                                     <Filter className="w-4 h-4 text-gray-500" />
                                     <span className="text-sm text-gray-700">Filter:</span>
                                 </div>
-                                {(['all', 'consultation', 'prescription', 'lab-report', 'diagnosis'] as const).map((filter) => (
+                                {(['all', 'consultation', 'lab-report', 'diagnosis'] as const).map((filter) => (
                                     <button
                                         key={filter}
                                         onClick={() => setActiveFilter(filter)}
@@ -762,8 +674,8 @@ const MedicalRecordsPage = () => {
                                                         >
                                                             <div className="flex items-center space-x-3 min-w-0">
                                                                 <div className={`w-8 h-8 rounded flex items-center justify-center ${attachment.fileType.includes('pdf') ? 'bg-red-100 text-red-600' :
-                                                                        attachment.fileType.includes('image') ? 'bg-green-100 text-green-600' :
-                                                                            'bg-blue-100 text-blue-600'
+                                                                    attachment.fileType.includes('image') ? 'bg-green-100 text-green-600' :
+                                                                        'bg-blue-100 text-blue-600'
                                                                     }`}>
                                                                     <FileText className="w-4 h-4" />
                                                                 </div>
@@ -835,8 +747,8 @@ const MedicalRecordsPage = () => {
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-600">Status:</span>
                                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${selectedRecord.status === 'active' ? 'bg-green-100 text-green-800' :
-                                                            selectedRecord.status === 'archived' ? 'bg-gray-100 text-gray-800' :
-                                                                'bg-yellow-100 text-yellow-800'
+                                                        selectedRecord.status === 'archived' ? 'bg-gray-100 text-gray-800' :
+                                                            'bg-yellow-100 text-yellow-800'
                                                         }`}>
                                                         {selectedRecord.status?.toUpperCase()}
                                                     </span>
