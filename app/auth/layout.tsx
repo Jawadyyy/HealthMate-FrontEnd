@@ -9,7 +9,6 @@ import styles from "./auth.module.css";
 import PatientLoginPage from "./patient/login/page";
 import PatientSignupPage from "./patient/signup/page";
 import DoctorLoginPage from "./doctor/login/page";
-import DoctorSignupPage from "./doctor/signup/page";
 import AdminLoginPage from "./admin/login/page";
 
 type Role = "patient" | "doctor" | "admin";
@@ -34,7 +33,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     setLoading(false);
   }, [pathname]);
 
-  // Show loading or nothing until role is determined
   if (loading) {
     return (
       <main className={styles.page}>
@@ -45,22 +43,26 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // If it's admin, render ONLY the admin page directly
-  if (currentRole === "admin") {
-    return <AdminLoginPage />; // Return admin page directly without any wrapper
+  // Admin login page
+  if (currentRole === "admin") return <AdminLoginPage />;
+
+  // Detect profile setup pages (example: "/patient/profile" or "/doctor/profile")
+  if (pathname.includes("/profile")) {
+    return <main className={styles.page}>
+      <div className={styles.card}>{children}</div>
+    </main>;
   }
 
-  // Panels for slider (patient and doctor only)
+  // Panels for patient/doctor login/signup
   const panels =
     currentRole === "patient"
       ? [<PatientLoginPage key="login" />, <PatientSignupPage key="signup" />]
-      : [<DoctorLoginPage key="login" />, <DoctorSignupPage key="signup" />];
+      : [<DoctorLoginPage key="login" />];
 
   const sliderStyle: React.CSSProperties = {
     transform: currentView === "signup" ? "translateX(-50%)" : "translateX(0%)"
   };
 
-  // Theme class
   const themeClass = currentRole === "doctor" ? styles.themeDoctor : styles.themePatient;
 
   return (
@@ -85,7 +87,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span>Home</span>
         </Link>
 
-        {/* Render slider for patient/doctor */}
+        {/* Render slider */}
         <div className={styles.sliderContainer} style={sliderStyle}>
           {panels.map((panel, idx) => (
             <div key={idx} className={styles.panel}>

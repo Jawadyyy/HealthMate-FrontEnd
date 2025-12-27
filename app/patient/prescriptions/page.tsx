@@ -36,41 +36,57 @@ interface Prescription {
     diagnosis?: string;
     instructions?: string;
     notes?: string;
+    doctorNotes?: string;
     status: 'active' | 'completed' | 'cancelled' | 'expired';
     issuedDate: string;
+    prescriptionDate?: string;
     expiryDate?: string;
     refills?: number;
     refillsRemaining?: number;
+    refillsUsed?: number;
+    nextRefillDate?: string;
     pharmacyNotes?: string;
     tags: string[];
+}
+
+interface PrescriptionStats {
+    totalPrescriptions: number;
+    activePrescriptions: number;
+    expiredPrescriptions: number;
+    cancelledPrescriptions: number;
 }
 
 const PrescriptionsPage = () => {
     const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
     const [filteredPrescriptions, setFilteredPrescriptions] = useState<Prescription[]>([]);
+    const [stats, setStats] = useState<PrescriptionStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'expired'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'expired' | 'cancelled'>('all');
     const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [refillLoading, setRefillLoading] = useState<string | null>(null);
 
     useEffect(() => {
         fetchPrescriptions();
+        fetchStats();
     }, []);
 
     useEffect(() => {
-        filterPrescriptions();
+        if (searchTerm) {
+            handleSearch();
+        } else {
+            filterPrescriptions();
+        }
     }, [searchTerm, statusFilter, prescriptions]);
 
     const fetchPrescriptions = async () => {
         try {
             setLoading(true);
-            // Assuming your API endpoint for prescriptions
             const response = await api.get('/prescriptions/my');
             let data = response.data.data || response.data || [];
 
-            // Transform the data if needed
             const transformedPrescriptions = data.map((prescription: any) => {
                 let doctor = null;
 
@@ -98,8 +114,10 @@ const PrescriptionsPage = () => {
                         _id: 'unknown',
                         name: 'Doctor Information Unavailable'
                     },
+                    issuedDate: prescription.prescriptionDate || prescription.issuedDate || prescription.createdAt,
                     status: prescription.status || 'active',
-                    tags: prescription.tags || []
+                    tags: prescription.tags || [],
+                    refillsRemaining: prescription.refills ? (prescription.refills - (prescription.refillsUsed || 0)) : 0
                 };
             });
 
@@ -107,168 +125,53 @@ const PrescriptionsPage = () => {
             setFilteredPrescriptions(transformedPrescriptions);
         } catch (error) {
             console.error('Error fetching prescriptions:', error);
-            // Mock data for demonstration
-            setPrescriptions(getMockPrescriptions());
-            setFilteredPrescriptions(getMockPrescriptions());
+            setPrescriptions([]);
+            setFilteredPrescriptions([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const getMockPrescriptions = (): Prescription[] => [
-        {
-            _id: '1',
-            patientId: 'patient123',
-            doctorId: 'doc1',
-            doctor: {
-                _id: 'doc1',
-                name: 'Dr. Sarah Johnson',
-                specialization: 'Cardiology',
-                hospital: 'City Medical Center',
-                email: 'sarah.johnson@medicalcenter.com',
-                phone: '+1 (555) 123-4567'
-            },
-            medications: [
-                {
-                    name: 'Atorvastatin',
-                    dosage: '20mg',
-                    frequency: 'Once daily',
-                    duration: '30 days',
-                    instructions: 'Take at bedtime',
-                    route: 'Oral'
-                },
-                {
-                    name: 'Metformin',
-                    dosage: '500mg',
-                    frequency: 'Twice daily',
-                    duration: '30 days',
-                    instructions: 'Take with meals',
-                    route: 'Oral'
-                }
-            ],
-            diagnosis: 'Type 2 Diabetes with Hyperlipidemia',
-            instructions: 'Monitor blood sugar levels regularly. Follow up in 4 weeks.',
-            notes: 'Patient advised to maintain low-carb diet and regular exercise.',
-            status: 'active',
-            issuedDate: '2024-01-15',
-            expiryDate: '2024-02-15',
-            refills: 2,
-            refillsRemaining: 1,
-            pharmacyNotes: 'May cause mild gastrointestinal discomfort initially',
-            tags: ['Diabetes', 'Cholesterol', 'Long-term']
-        },
-        {
-            _id: '2',
-            patientId: 'patient123',
-            doctorId: 'doc2',
-            doctor: {
-                _id: 'doc2',
-                name: 'Dr. Michael Chen',
-                specialization: 'Pulmonology',
-                hospital: 'Respiratory Care Clinic',
-                email: 'michael.chen@respiratory.com',
-                phone: '+1 (555) 987-6543'
-            },
-            medications: [
-                {
-                    name: 'Albuterol Inhaler',
-                    dosage: '90mcg',
-                    frequency: 'As needed',
-                    duration: '90 days',
-                    instructions: '2 puffs every 4-6 hours as needed for shortness of breath',
-                    route: 'Inhalation'
-                },
-                {
-                    name: 'Montelukast',
-                    dosage: '10mg',
-                    frequency: 'Once daily at bedtime',
-                    duration: '30 days',
-                    instructions: '',
-                    route: 'Oral'
-                }
-            ],
-            diagnosis: 'Bronchial Asthma',
-            instructions: 'Use rescue inhaler before physical activity. Avoid triggers.',
-            status: 'active',
-            issuedDate: '2024-01-10',
-            expiryDate: '2024-04-10',
-            refills: 3,
-            refillsRemaining: 3,
-            tags: ['Asthma', 'Rescue', 'Maintenance']
-        },
-        {
-            _id: '3',
-            patientId: 'patient123',
-            doctorId: 'doc3',
-            doctor: {
-                _id: 'doc3',
-                name: 'Dr. Emily Rodriguez',
-                specialization: 'Orthopedics',
-                hospital: 'Sports Medicine Center',
-                email: 'emily.rodriguez@sportsmed.com',
-                phone: '+1 (555) 456-7890'
-            },
-            medications: [
-                {
-                    name: 'Ibuprofen',
-                    dosage: '400mg',
-                    frequency: 'Every 6 hours as needed',
-                    duration: '10 days',
-                    instructions: 'Take with food to avoid stomach upset',
-                    route: 'Oral'
-                },
-                {
-                    name: 'Cyclobenzaprine',
-                    dosage: '10mg',
-                    frequency: 'Three times daily',
-                    duration: '7 days',
-                    instructions: 'May cause drowsiness',
-                    route: 'Oral'
-                }
-            ],
-            diagnosis: 'Acute Lower Back Strain',
-            instructions: 'Rest and apply ice to affected area. Follow up if pain persists.',
-            status: 'completed',
-            issuedDate: '2023-12-05',
-            expiryDate: '2024-01-05',
-            refills: 0,
-            refillsRemaining: 0,
-            tags: ['Pain Management', 'Muscle Relaxant', 'Short-term']
-        },
-        {
-            _id: '4',
-            patientId: 'patient123',
-            doctorId: 'doc4',
-            doctor: {
-                _id: 'doc4',
-                name: 'Dr. James Wilson',
-                specialization: 'Psychiatry',
-                hospital: 'Mental Wellness Clinic',
-                email: 'james.wilson@wellness.com',
-                phone: '+1 (555) 234-5678'
-            },
-            medications: [
-                {
-                    name: 'Sertraline',
-                    dosage: '50mg',
-                    frequency: 'Once daily',
-                    duration: '30 days',
-                    instructions: 'Take in the morning',
-                    route: 'Oral'
-                }
-            ],
-            diagnosis: 'Generalized Anxiety Disorder',
-            instructions: 'Take medication consistently at same time each day. Attend therapy sessions.',
-            notes: 'Patient responding well to treatment. Continue current regimen.',
-            status: 'active',
-            issuedDate: '2024-01-20',
-            expiryDate: '2024-02-20',
-            refills: 5,
-            refillsRemaining: 4,
-            pharmacyNotes: 'May take 2-4 weeks for full effect',
-            tags: ['Mental Health', 'Long-term', 'Therapy']
+    const fetchStats = async () => {
+        try {
+            const response = await api.get('/prescriptions/stats/count');
+            setStats(response.data.data || response.data || null);
+        } catch (error) {
+            console.error('Error fetching stats:', error);
         }
-    ];
+    };
+
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) {
+            filterPrescriptions();
+            return;
+        }
+
+        try {
+            const response = await api.get('/prescriptions/search', {
+                params: { q: searchTerm }
+            });
+            let data = response.data.data || response.data || [];
+
+            const transformedPrescriptions = data.map((prescription: any) => ({
+                ...prescription,
+                doctor: prescription.doctorId || { _id: 'unknown', name: 'Doctor Information Unavailable' },
+                issuedDate: prescription.prescriptionDate || prescription.issuedDate || prescription.createdAt,
+                tags: prescription.tags || [],
+                refillsRemaining: prescription.refills ? (prescription.refills - (prescription.refillsUsed || 0)) : 0
+            }));
+
+            let filtered = transformedPrescriptions;
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter((p: Prescription) => p.status === statusFilter);
+            }
+
+            setFilteredPrescriptions(filtered);
+        } catch (error) {
+            console.error('Error searching prescriptions:', error);
+            filterPrescriptions();
+        }
+    };
 
     const filterPrescriptions = () => {
         let filtered = [...prescriptions];
@@ -277,25 +180,72 @@ const PrescriptionsPage = () => {
             filtered = filtered.filter(prescription => prescription.status === statusFilter);
         }
 
-        if (searchTerm) {
-            const searchLower = searchTerm.toLowerCase();
-            filtered = filtered.filter(prescription =>
-                prescription.medications.some(med =>
-                    med.name.toLowerCase().includes(searchLower)
-                ) ||
-                prescription.doctor.name.toLowerCase().includes(searchLower) ||
-                (prescription.diagnosis && prescription.diagnosis.toLowerCase().includes(searchLower)) ||
-                prescription.tags.some(tag => tag.toLowerCase().includes(searchLower))
-            );
+        setFilteredPrescriptions(filtered);
+    };
+
+    const handleRefillRequest = async (prescription: Prescription) => {
+        if (!prescription.refillsRemaining || prescription.refillsRemaining <= 0) {
+            alert('No refills remaining for this prescription.');
+            return;
         }
 
-        setFilteredPrescriptions(filtered);
+        try {
+            setRefillLoading(prescription._id);
+            const response = await api.post(`/prescriptions/refill/${prescription._id}`, {});
+            alert('Refill request submitted successfully!');
+            await fetchPrescriptions();
+            await fetchStats();
+        } catch (error: any) {
+            console.error('Error requesting refill:', error);
+            alert(error.response?.data?.message || 'Failed to request refill. Please try again.');
+        } finally {
+            setRefillLoading(null);
+        }
+    };
+
+    const handleCancelPrescription = async (prescriptionId: string) => {
+        if (!confirm('Are you sure you want to cancel this prescription?')) {
+            return;
+        }
+
+        try {
+            await api.patch(`/prescriptions/cancel/${prescriptionId}`);
+            alert('Prescription cancelled successfully!');
+            await fetchPrescriptions();
+            await fetchStats();
+            setShowDetailModal(false);
+        } catch (error: any) {
+            console.error('Error cancelling prescription:', error);
+            alert(error.response?.data?.message || 'Failed to cancel prescription. Please try again.');
+        }
+    };
+
+    const handleViewDetails = async (prescription: Prescription) => {
+        try {
+            const response = await api.get(`/prescriptions/${prescription._id}`);
+            const detailData = response.data.data || response.data;
+
+            const transformedPrescription = {
+                ...detailData,
+                doctor: detailData.doctorId || prescription.doctor,
+                issuedDate: detailData.prescriptionDate || detailData.issuedDate || detailData.createdAt,
+                tags: detailData.tags || [],
+                refillsRemaining: detailData.refills ? (detailData.refills - (detailData.refillsUsed || 0)) : 0
+            };
+
+            setSelectedPrescription(transformedPrescription);
+            setShowDetailModal(true);
+        } catch (error) {
+            console.error('Error fetching prescription details:', error);
+            setSelectedPrescription(prescription);
+            setShowDetailModal(true);
+        }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'active': return 'bg-green-100 text-green-800 border-green-200';
-            case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'active': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'completed': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
             case 'expired': return 'bg-gray-100 text-gray-800 border-gray-200';
             case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -330,34 +280,37 @@ const PrescriptionsPage = () => {
         });
     };
 
-    const handleViewDetails = (prescription: Prescription) => {
-        setSelectedPrescription(prescription);
-        setShowDetailModal(true);
-    };
-
     const handlePrintPrescription = (prescription: Prescription) => {
-        // Implement print functionality
-        console.log('Printing prescription:', prescription);
         window.print();
     };
 
-    const handleRefillRequest = (prescription: Prescription) => {
-        // Implement refill request functionality
-        console.log('Requesting refill for:', prescription);
+    const handleDownloadPrescription = (prescription: Prescription) => {
+        console.log('Downloading prescription:', prescription);
+        alert('Download functionality will be implemented with PDF generation.');
     };
 
-    const handleDownloadPrescription = (prescription: Prescription) => {
-        // Implement download functionality
-        console.log('Downloading prescription:', prescription);
+    const calculateExpiringSoon = () => {
+        return prescriptions.filter(p => {
+            if (!p.expiryDate) return false;
+            const expiry = new Date(p.expiryDate);
+            const today = new Date();
+            const diffTime = expiry.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= 7 && diffDays >= 0 && p.status === 'active';
+        }).length;
+    };
+
+    const calculateTotalRefills = () => {
+        return prescriptions.reduce((acc, p) => acc + (p.refillsRemaining || 0), 0);
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex items-center justify-center">
                 <div className="text-center">
                     <div className="relative inline-block">
-                        <div className="w-20 h-20 border-4 border-emerald-100 rounded-full"></div>
-                        <div className="absolute top-0 left-0 w-20 h-20 border-4 border-emerald-600 rounded-full border-t-transparent animate-spin"></div>
+                        <div className="w-20 h-20 border-4 border-blue-100 rounded-full"></div>
+                        <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
                     </div>
                     <p className="mt-6 text-lg font-medium text-gray-700">Loading your prescriptions...</p>
                     <p className="text-sm text-gray-500 mt-2">Please wait while we fetch your medication information</p>
@@ -367,15 +320,14 @@ const PrescriptionsPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Header */}
                 <div className="mb-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Prescriptions</h1>
                             <p className="text-gray-600 mt-2 flex items-center">
-                                <Pill className="w-4 h-4 mr-2 text-emerald-600" />
+                                <Pill className="w-4 h-4 mr-2 text-blue-600" />
                                 Manage your medications and prescription history
                             </p>
                         </div>
@@ -387,8 +339,11 @@ const PrescriptionsPage = () => {
                                 {viewMode === 'grid' ? 'List View' : 'Grid View'}
                             </button>
                             <button
-                                onClick={fetchPrescriptions}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center"
+                                onClick={() => {
+                                    fetchPrescriptions();
+                                    fetchStats();
+                                }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-800 transition-colors flex items-center"
                             >
                                 <RefreshCw className="w-4 h-4 mr-2" />
                                 Refresh
@@ -396,15 +351,16 @@ const PrescriptionsPage = () => {
                         </div>
                     </div>
 
-                    {/* Stats Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-600">Total Prescriptions</p>
-                                    <p className="text-2xl font-bold text-gray-900">{prescriptions.length}</p>
+                                    <p className="text-2xl font-bold text-gray-900">
+                                        {stats?.totalPrescriptions || prescriptions.length}
+                                    </p>
                                 </div>
-                                <Pill className="w-8 h-8 text-emerald-600" />
+                                <Pill className="w-8 h-8 text-blue-600" />
                             </div>
                         </div>
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
@@ -412,10 +368,10 @@ const PrescriptionsPage = () => {
                                 <div>
                                     <p className="text-sm text-gray-600">Active</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {prescriptions.filter(p => p.status === 'active').length}
+                                        {stats?.activePrescriptions || prescriptions.filter(p => p.status === 'active').length}
                                     </p>
                                 </div>
-                                <CheckCircle className="w-8 h-8 text-green-600" />
+                                <CheckCircle className="w-8 h-8 text-blue-600" />
                             </div>
                         </div>
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
@@ -423,14 +379,7 @@ const PrescriptionsPage = () => {
                                 <div>
                                     <p className="text-sm text-gray-600">Expiring Soon</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {prescriptions.filter(p => {
-                                            if (!p.expiryDate) return false;
-                                            const expiry = new Date(p.expiryDate);
-                                            const today = new Date();
-                                            const diffTime = expiry.getTime() - today.getTime();
-                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                            return diffDays <= 7 && p.status === 'active';
-                                        }).length}
+                                        {calculateExpiringSoon()}
                                     </p>
                                 </div>
                                 <AlertCircle className="w-8 h-8 text-amber-600" />
@@ -441,15 +390,14 @@ const PrescriptionsPage = () => {
                                 <div>
                                     <p className="text-sm text-gray-600">Refills Available</p>
                                     <p className="text-2xl font-bold text-gray-900">
-                                        {prescriptions.reduce((acc, p) => acc + (p.refillsRemaining || 0), 0)}
+                                        {calculateTotalRefills()}
                                     </p>
                                 </div>
-                                <RefreshCw className="w-8 h-8 text-blue-600" />
+                                <RefreshCw className="w-8 h-8 text-indigo-600" />
                             </div>
                         </div>
                     </div>
 
-                    {/* Search and Filters */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
                         <div className="flex flex-col lg:flex-row gap-4">
                             <div className="flex-1 relative">
@@ -459,7 +407,7 @@ const PrescriptionsPage = () => {
                                     placeholder="Search medications, doctor, or diagnosis..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                 />
                             </div>
 
@@ -468,12 +416,12 @@ const PrescriptionsPage = () => {
                                     <Filter className="w-4 h-4 text-gray-500" />
                                     <span className="text-sm text-gray-700">Status:</span>
                                 </div>
-                                {(['all', 'active', 'completed', 'expired'] as const).map((filter) => (
+                                {(['all', 'active', 'completed', 'expired', 'cancelled'] as const).map((filter) => (
                                     <button
                                         key={filter}
                                         onClick={() => setStatusFilter(filter)}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === filter
-                                            ? 'bg-emerald-600 text-white shadow-sm'
+                                            ? 'bg-blue-600 text-white shadow-sm'
                                             : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                                             }`}
                                     >
@@ -484,7 +432,6 @@ const PrescriptionsPage = () => {
                         </div>
                     </div>
 
-                    {/* Prescriptions Display */}
                     {filteredPrescriptions.length > 0 ? (
                         <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}`}>
                             {filteredPrescriptions.map((prescription) => (
@@ -494,8 +441,8 @@ const PrescriptionsPage = () => {
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
-                                                <Pill className="w-6 h-6 text-emerald-600" />
+                                            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                                                <Pill className="w-6 h-6 text-blue-600" />
                                             </div>
                                             <div>
                                                 <div className="flex items-center space-x-2">
@@ -527,7 +474,7 @@ const PrescriptionsPage = () => {
                                         <div className="space-y-2">
                                             {prescription.medications.slice(0, 2).map((med, index) => (
                                                 <div key={index} className="flex items-start space-x-2">
-                                                    <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-baseline justify-between">
                                                             <span className="font-medium text-gray-900">{med.name}</span>
@@ -538,7 +485,7 @@ const PrescriptionsPage = () => {
                                                 </div>
                                             ))}
                                             {prescription.medications.length > 2 && (
-                                                <div className="text-sm text-emerald-600">
+                                                <div className="text-sm text-blue-600">
                                                     +{prescription.medications.length - 2} more medications
                                                 </div>
                                             )}
@@ -559,7 +506,7 @@ const PrescriptionsPage = () => {
                                         {prescription.doctor && (
                                             <div className="flex items-center">
                                                 <User className="w-4 h-4 mr-2 flex-shrink-0" />
-                                                <span className="truncate">Dr. {prescription.doctor.name.split(' ').slice(-1)}</span>
+                                                <span className="truncate">{prescription.doctor.name}</span>
                                                 {prescription.doctor.specialization && (
                                                     <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
                                                         {prescription.doctor.specialization}
@@ -598,7 +545,7 @@ const PrescriptionsPage = () => {
                                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                                         <button
                                             onClick={() => handleViewDetails(prescription)}
-                                            className="flex items-center space-x-2 text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                                            className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
                                         >
                                             <Eye className="w-4 h-4" />
                                             <span>View Details</span>
@@ -608,9 +555,10 @@ const PrescriptionsPage = () => {
                                             {prescription.status === 'active' && prescription.refillsRemaining && prescription.refillsRemaining > 0 && (
                                                 <button
                                                     onClick={() => handleRefillRequest(prescription)}
-                                                    className="text-xs text-blue-600 hover:text-blue-700"
+                                                    disabled={refillLoading === prescription._id}
+                                                    className="text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50"
                                                 >
-                                                    Request Refill
+                                                    {refillLoading === prescription._id ? 'Processing...' : 'Request Refill'}
                                                 </button>
                                             )}
                                         </div>
@@ -620,19 +568,19 @@ const PrescriptionsPage = () => {
                         </div>
                     ) : (
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
-                            <div className="w-20 h-20 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                <Pill className="w-10 h-10 text-emerald-600" />
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                                <Pill className="w-10 h-10 text-blue-600" />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-3">No prescriptions found</h3>
                             <p className="text-gray-600 max-w-md mx-auto mb-6">
                                 {searchTerm
                                     ? 'No prescriptions match your search criteria. Try different keywords.'
-                                    : 'You don\'t have any active prescriptions. Your doctor will add prescriptions after consultations.'}
+                                    : 'You don\'t have any prescriptions yet. Your doctor will add prescriptions after consultations.'}
                             </p>
                             {searchTerm && (
                                 <button
                                     onClick={() => setSearchTerm('')}
-                                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-800 transition-colors"
                                 >
                                     Clear Search
                                 </button>
@@ -641,15 +589,13 @@ const PrescriptionsPage = () => {
                     )}
                 </div>
 
-                {/* Prescription Detail Modal */}
                 {showDetailModal && selectedPrescription && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                            {/* Modal Header */}
-                            <div className="bg-gradient-to-r from-emerald-50 to-emerald-100/30 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <div className="bg-gradient-to-r from-blue-50 to-blue-100/30 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                        <Pill className="w-6 h-6 text-emerald-600" />
+                                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <Pill className="w-6 h-6 text-blue-600" />
                                     </div>
                                     <div>
                                         <h2 className="text-xl font-bold text-gray-900">Prescription Details</h2>
@@ -688,16 +634,13 @@ const PrescriptionsPage = () => {
                                 </div>
                             </div>
 
-                            {/* Modal Content */}
                             <div className="flex-1 overflow-y-auto p-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {/* Left Column - Prescription Details */}
                                     <div className="lg:col-span-2 space-y-6">
-                                        {/* Doctor Information */}
                                         {selectedPrescription.doctor && (
                                             <div className="bg-gray-50 rounded-xl p-5">
                                                 <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                                    <User className="w-5 h-5 mr-2 text-emerald-600" />
+                                                    <User className="w-5 h-5 mr-2 text-blue-600" />
                                                     Prescribing Physician
                                                 </h3>
                                                 <div className="space-y-4">
@@ -735,7 +678,6 @@ const PrescriptionsPage = () => {
                                             </div>
                                         )}
 
-                                        {/* Diagnosis */}
                                         {selectedPrescription.diagnosis && (
                                             <div className="bg-red-50/50 rounded-xl p-5 border border-red-100">
                                                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
@@ -746,10 +688,9 @@ const PrescriptionsPage = () => {
                                             </div>
                                         )}
 
-                                        {/* Medications List */}
                                         <div className="bg-white border border-gray-200 rounded-xl p-5">
                                             <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                                <Pill className="w-5 h-5 mr-2 text-emerald-600" />
+                                                <Pill className="w-5 h-5 mr-2 text-blue-600" />
                                                 Medications ({selectedPrescription.medications.length})
                                             </h3>
                                             <div className="space-y-4">
@@ -788,7 +729,6 @@ const PrescriptionsPage = () => {
                                             </div>
                                         </div>
 
-                                        {/* Additional Information */}
                                         <div className="space-y-4">
                                             {selectedPrescription.instructions && (
                                                 <div>
@@ -804,17 +744,25 @@ const PrescriptionsPage = () => {
                                                 <div>
                                                     <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                                                         <FileText className="w-5 h-5 mr-2 text-gray-600" />
-                                                        Doctor's Notes
+                                                        Additional Notes
                                                     </h3>
                                                     <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{selectedPrescription.notes}</p>
+                                                </div>
+                                            )}
+
+                                            {selectedPrescription.doctorNotes && (
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                                                        <FileText className="w-5 h-5 mr-2 text-gray-600" />
+                                                        Doctor's Notes
+                                                    </h3>
+                                                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{selectedPrescription.doctorNotes}</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Right Column - Side Info */}
                                     <div className="space-y-6">
-                                        {/* Prescription Info Card */}
                                         <div className="bg-white border border-gray-200 rounded-xl p-5">
                                             <h3 className="font-semibold text-gray-900 mb-4">Prescription Information</h3>
                                             <div className="space-y-3">
@@ -834,6 +782,12 @@ const PrescriptionsPage = () => {
                                                         <span className="font-medium text-gray-900">{selectedPrescription.refills}</span>
                                                     </div>
                                                 )}
+                                                {selectedPrescription.refillsUsed !== undefined && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Refills Used</span>
+                                                        <span className="font-medium text-gray-900">{selectedPrescription.refillsUsed}</span>
+                                                    </div>
+                                                )}
                                                 {selectedPrescription.refillsRemaining !== undefined && (
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-sm text-gray-600">Refills Remaining</span>
@@ -842,10 +796,15 @@ const PrescriptionsPage = () => {
                                                         </span>
                                                     </div>
                                                 )}
+                                                {selectedPrescription.nextRefillDate && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Next Refill Date</span>
+                                                        <span className="font-medium text-gray-900">{formatDate(selectedPrescription.nextRefillDate)}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Pharmacy Notes */}
                                         {selectedPrescription.pharmacyNotes && (
                                             <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-5">
                                                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
@@ -856,7 +815,6 @@ const PrescriptionsPage = () => {
                                             </div>
                                         )}
 
-                                        {/* Tags */}
                                         {selectedPrescription.tags && selectedPrescription.tags.length > 0 && (
                                             <div className="bg-white border border-gray-200 rounded-xl p-5">
                                                 <h3 className="font-semibold text-gray-900 mb-3">Categories</h3>
@@ -873,7 +831,6 @@ const PrescriptionsPage = () => {
                                             </div>
                                         )}
 
-                                        {/* Actions Card */}
                                         <div className="bg-gray-50 rounded-xl p-5">
                                             <h3 className="font-semibold text-gray-900 mb-4">Actions</h3>
                                             <div className="space-y-3">
@@ -884,20 +841,23 @@ const PrescriptionsPage = () => {
                                                     <Printer className="w-5 h-5" />
                                                     <span>Print Prescription</span>
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDownloadPrescription(selectedPrescription)}
-                                                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                                >
-                                                    <Download className="w-5 h-5" />
-                                                    <span>Download PDF</span>
-                                                </button>
                                                 {selectedPrescription.status === 'active' && selectedPrescription.refillsRemaining && selectedPrescription.refillsRemaining > 0 && (
                                                     <button
                                                         onClick={() => handleRefillRequest(selectedPrescription)}
-                                                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                                                        disabled={refillLoading === selectedPrescription._id}
+                                                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50"
                                                     >
                                                         <RefreshCw className="w-5 h-5" />
-                                                        <span>Request Refill</span>
+                                                        <span>{refillLoading === selectedPrescription._id ? 'Processing...' : 'Request Refill'}</span>
+                                                    </button>
+                                                )}
+                                                {selectedPrescription.status === 'active' && (
+                                                    <button
+                                                        onClick={() => handleCancelPrescription(selectedPrescription._id)}
+                                                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                        <span>Cancel Prescription</span>
                                                     </button>
                                                 )}
                                             </div>
@@ -906,7 +866,6 @@ const PrescriptionsPage = () => {
                                 </div>
                             </div>
 
-                            {/* Modal Footer */}
                             <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
                                 <div className="flex items-center justify-between">
                                     <button

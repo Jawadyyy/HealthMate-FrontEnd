@@ -44,18 +44,14 @@ export default function DoctorLoginPage() {
     }
   };
 
-  const goToSignup = () => {
-    router.push("/auth/doctor/signup");
-  };
-
   return (
     <>
       {/* Left: Login Form */}
       <div className={styles.formPanel}>
         <div className={styles.formLogo}>
-         
+
         </div>
-        
+
         <h1>Doctor Sign In</h1>
 
         {error && <p className={styles.error}>{error}</p>}
@@ -85,7 +81,7 @@ export default function DoctorLoginPage() {
         </form>
 
         <p className={styles.availability}>
-         
+
         </p>
       </div>
 
@@ -93,9 +89,6 @@ export default function DoctorLoginPage() {
       <div className={styles.ctaPanel}>
         <h1>Hello, Doctor!</h1>
         <p>Join our network and start helping patients</p>
-        <button onClick={goToSignup}>
-          REGISTER
-        </button>
       </div>
     </>
   );

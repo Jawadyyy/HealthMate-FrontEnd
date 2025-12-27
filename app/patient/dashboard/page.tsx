@@ -202,9 +202,6 @@ const PatientDashboard = () => {
                   <div className="w-40 h-40 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-5xl font-bold text-blue-700 shadow-xl">
                     {patientData?.name?.charAt(0) || 'P'}
                   </div>
-                  <div className="absolute bottom-4 right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition-all duration-200">
-                    <Edit className="w-4 h-4 text-gray-600" />
-                  </div>
                 </div>
 
                 <div className="text-center lg:text-left mt-6">
