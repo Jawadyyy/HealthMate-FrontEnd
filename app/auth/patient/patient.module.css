@@ -954,3 +954,152 @@
 .patientPage::-webkit-scrollbar-thumb:hover {
     background: rgba(37, 99, 235, 0.5);
 }
+
+/* Add these styles to your existing patient.module.css */
+
+/* Progress Indicator */
+.progressIndicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1.5rem 0 2rem;
+    padding: 0 2rem;
+}
+
+.progressStep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
+
+.progressStep.active {
+    opacity: 1;
+}
+
+.stepNumber {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.progressStep.active .stepNumber {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.progressStep span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #666;
+}
+
+.progressStep.active span {
+    color: #667eea;
+}
+
+.progressLine {
+    width: 80px;
+    height: 2px;
+    background: #e0e0e0;
+    margin: 0 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Profile Form Specific Styles */
+.profileForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.profileForm input,
+.profileForm select,
+.profileForm textarea {
+    width: 100%;
+    padding: 0.875rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.profileForm input:focus,
+.profileForm select:focus,
+.profileForm textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.profileForm textarea {
+    resize: vertical;
+    grid-column: 1 / -1;
+}
+
+.profileForm button {
+    margin-top: 0.5rem;
+}
+
+/* Info Panel Icon */
+.infoIcon {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .progressIndicator {
+        padding: 0 1rem;
+    }
+
+    .progressLine {
+        width: 40px;
+    }
+
+    .formRow {
+        grid-template-columns: 1fr;
+    }
+
+    .stepNumber {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .progressStep span {
+        font-size: 0.75rem;
+    }
+}

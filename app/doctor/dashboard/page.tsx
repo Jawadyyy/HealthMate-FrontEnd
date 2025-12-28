@@ -65,7 +65,7 @@ const DoctorDashboardPage = () => {
         if (typeof window !== 'undefined') {
             const token = localStorage.getItem('token');
             const role = localStorage.getItem('role');
-            
+
             if (token && role === 'doctor') {
                 setIsAuthenticated(true);
                 fetchDoctorProfile();
@@ -91,33 +91,41 @@ const DoctorDashboardPage = () => {
 
     const fetchDoctorProfile = async () => {
         try {
-            console.log('Fetching doctor profile...');
+            console.log('=== TOKEN DEBUG ===');
+            console.log('Token:', localStorage.getItem('token'));
+            console.log('UserId in localStorage:', localStorage.getItem('userId'));
+            console.log('Role:', localStorage.getItem('role'));
+
             const response = await api.get('/doctors/me');
-            console.log('Doctor profile response:', response.data);
-            
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            console.log('RAW DOCTOR DATA:', JSON.stringify(response.data, null, 2));
+
             const doctorData = response.data;
-            // Get name from user object or doctor data
+
+            // Extract name and ID
             const name = doctorData.userId?.name || doctorData.fullName || 'Doctor';
+            const id = doctorData._id || doctorData.userId?._id || '';
+
+            console.log('Extracted name:', name);
+            console.log('Extracted ID:', id);
+
+            // SET THE STATE - THIS WAS MISSING!
             setDoctorName(name);
-            setDoctorId(doctorData._id || doctorData.userId?._id || '');
-            
+            setDoctorId(id);
+
             // Store doctor ID in localStorage for later use
             if (doctorData._id) {
                 localStorage.setItem('doctorId', doctorData._id);
             }
-            
-        } catch (error: any) {
-            console.error('Error fetching doctor profile:', error);
-            addApiError(`Doctor profile: ${error.message}`);
-            
-            // If authentication fails, redirect to login
-            if (error.response?.status === 401) {
-                handleLogout();
-                return;
-            }
-            
-            // Use fallback name if API fails
-            setDoctorName('Doctor');
+
+            console.log('✅ Doctor profile loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Error fetching doctor profile:', error);
+            console.error('Error response:', error);
+            addApiError(`Doctor profile: ${error}`);
+            setLoading(false); // Stop loading on error
         }
     };
 
@@ -125,14 +133,14 @@ const DoctorDashboardPage = () => {
         try {
             setLoading(true);
             setApiErrors([]);
-            
+
             console.log('Starting dashboard data fetch...');
             console.log('Doctor ID:', doctorId);
-            
+
             // Use mock data for development/testing
             if (!doctorId || doctorId === '') {
                 console.log('Using mock data for development...');
-                
+
                 // Mock data for testing
                 setStats({
                     totalPatients: 156,
@@ -140,7 +148,7 @@ const DoctorDashboardPage = () => {
                     earnings: 12500,
                     pendingAppointments: 8
                 });
-                
+
                 // Mock today's appointments
                 setTodaysAppointments([
                     {
@@ -158,7 +166,7 @@ const DoctorDashboardPage = () => {
                         status: 'confirmed'
                     }
                 ]);
-                
+
                 // Mock upcoming appointments
                 setUpcomingAppointments([
                     {
@@ -176,7 +184,7 @@ const DoctorDashboardPage = () => {
                         status: 'scheduled'
                     }
                 ]);
-                
+
                 // Mock prescriptions
                 setRecentPrescriptions([
                     {
@@ -194,11 +202,11 @@ const DoctorDashboardPage = () => {
                         medications: [{ name: 'Ibuprofen' }]
                     }
                 ]);
-                
+
                 setLoading(false);
                 return;
             }
-            
+
             // 1. Fetch doctor's appointments
             let appointments: Appointment[] = [];
             try {
@@ -209,7 +217,7 @@ const DoctorDashboardPage = () => {
                 console.error('Error fetching appointments:', error);
                 addApiError(`Appointments: ${error.message}`);
             }
-            
+
             // Filter today's appointments
             const today = new Date().toISOString().split('T')[0];
             const todays = appointments.filter((apt: Appointment) => {
@@ -217,7 +225,7 @@ const DoctorDashboardPage = () => {
                 const aptDate = new Date(apt.appointmentDate).toISOString().split('T')[0];
                 return aptDate === today && (apt.status === 'scheduled' || apt.status === 'pending' || apt.status === 'confirmed');
             });
-            
+
             // Filter upcoming appointments
             const upcoming = appointments.filter((apt: Appointment) => {
                 if (!apt.appointmentDate) return false;
@@ -226,10 +234,10 @@ const DoctorDashboardPage = () => {
                 today.setHours(0, 0, 0, 0);
                 return aptDate > today && (apt.status === 'scheduled' || apt.status === 'pending' || apt.status === 'confirmed');
             }).slice(0, 5);
-            
+
             setTodaysAppointments(todays.slice(0, 5));
             setUpcomingAppointments(upcoming);
-            
+
             // 2. Fetch doctor's prescriptions
             let prescriptions: Prescription[] = [];
             try {
@@ -247,9 +255,9 @@ const DoctorDashboardPage = () => {
                     addApiError(`Prescriptions: ${error.message}`);
                 }
             }
-            
+
             setRecentPrescriptions(prescriptions.slice(0, 5));
-            
+
             // 3. Get patients from appointments
             const uniquePatients = new Set<string>();
             appointments.forEach((apt: Appointment) => {
@@ -258,27 +266,27 @@ const DoctorDashboardPage = () => {
                 }
             });
             const totalPatients = uniquePatients.size;
-            
+
             // 4. Calculate earnings from appointments
             let totalEarnings = 0;
-            const completedAppointments = appointments.filter(apt => 
+            const completedAppointments = appointments.filter(apt =>
                 apt.status === 'completed' || apt.status === 'confirmed' || apt.status === 'paid'
             );
-            
+
             totalEarnings = completedAppointments.reduce((sum, apt) => {
                 return sum + (apt.doctorId?.fee || 0);
             }, 0);
-            
+
             // 5. Set statistics
             setStats({
                 totalPatients: totalPatients,
                 totalAppointments: appointments.length || 0,
                 earnings: totalEarnings || 0,
-                pendingAppointments: appointments.filter((apt: Appointment) => 
+                pendingAppointments: appointments.filter((apt: Appointment) =>
                     apt.status === 'pending' || apt.status === 'scheduled'
                 ).length || 0
             });
-            
+
             console.log('Dashboard data loaded successfully:', {
                 patients: totalPatients,
                 appointments: appointments.length,
@@ -287,10 +295,10 @@ const DoctorDashboardPage = () => {
                 upcomingAppointments: upcoming.length,
                 prescriptions: prescriptions.length
             });
-            
+
         } catch (error: any) {
             console.error('Error in fetchDashboardData:', error);
-            
+
             if (error.response) {
                 console.error('API Error Details:', {
                     url: error.config?.url,
@@ -298,15 +306,15 @@ const DoctorDashboardPage = () => {
                     statusText: error.response?.statusText,
                     data: error.response?.data
                 });
-                
+
                 if (error.response.status === 401) {
                     handleLogout();
                     return;
                 }
             }
-            
+
             addApiError(`Dashboard data: ${error.message}`);
-            
+
             // Fallback mock data for development
             setStats({
                 totalPatients: 156,
@@ -314,7 +322,7 @@ const DoctorDashboardPage = () => {
                 earnings: 12500,
                 pendingAppointments: 8
             });
-            
+
             // Mock today's appointments
             setTodaysAppointments([
                 {
@@ -325,7 +333,7 @@ const DoctorDashboardPage = () => {
                     status: 'scheduled'
                 }
             ]);
-            
+
             // Mock upcoming appointments
             setUpcomingAppointments([
                 {
@@ -336,7 +344,7 @@ const DoctorDashboardPage = () => {
                     status: 'confirmed'
                 }
             ]);
-            
+
             // Mock prescriptions
             setRecentPrescriptions([
                 {
@@ -347,7 +355,7 @@ const DoctorDashboardPage = () => {
                     medications: [{ name: 'Amoxicillin' }]
                 }
             ]);
-            
+
         } finally {
             setLoading(false);
         }
@@ -470,7 +478,7 @@ const DoctorDashboardPage = () => {
                                 </button>
                             </div>
                             <p className="text-gray-500 mt-2">Welcome back, {doctorName}! Here's your overview</p>
-                            
+
                             {/* API Errors Display */}
                             {apiErrors.length > 0 && (
                                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -481,7 +489,7 @@ const DoctorDashboardPage = () => {
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="flex items-center space-x-4">
                             <div className="text-sm text-gray-500">
                                 {new Date().toLocaleDateString('en-US', {
@@ -491,7 +499,7 @@ const DoctorDashboardPage = () => {
                                     day: 'numeric'
                                 })}
                             </div>
-                            
+
                             {/* Profile Dropdown */}
                             <div className="relative">
                                 <button
@@ -506,7 +514,7 @@ const DoctorDashboardPage = () => {
                                         <p className="text-xs text-gray-500">Doctor</p>
                                     </div>
                                 </button>
-                                
+
                                 {showProfileMenu && (
                                     <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
                                         <button
@@ -624,7 +632,7 @@ const DoctorDashboardPage = () => {
                                     <p className="text-sm text-gray-500">Your schedule for today</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/appointments')}
                                 className="text-emerald-600 hover:text-emerald-700 font-medium text-sm cursor-pointer"
                             >
@@ -635,8 +643,8 @@ const DoctorDashboardPage = () => {
                         <div className="space-y-4">
                             {todaysAppointments.length > 0 ? (
                                 todaysAppointments.map((appointment, index) => (
-                                    <div 
-                                        key={index} 
+                                    <div
+                                        key={index}
                                         className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
                                         onClick={() => handleViewAppointmentDetails(appointment._id)}
                                     >
@@ -652,12 +660,11 @@ const DoctorDashboardPage = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            <span className={`px-2 py-1 text-xs rounded-full ${appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
                                                 appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                                                appointment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-gray-100 text-gray-700'
-                                            }`}>
+                                                    appointment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                }`}>
                                                 {appointment.status || 'scheduled'}
                                             </span>
                                             <span className="text-sm font-medium text-gray-700">
@@ -694,7 +701,7 @@ const DoctorDashboardPage = () => {
                                     <p className="text-sm text-gray-500">Next 5 appointments</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/appointments')}
                                 className="text-emerald-600 hover:text-emerald-700 font-medium text-sm cursor-pointer"
                             >
@@ -705,8 +712,8 @@ const DoctorDashboardPage = () => {
                         <div className="space-y-4">
                             {upcomingAppointments.length > 0 ? (
                                 upcomingAppointments.map((appointment, index) => (
-                                    <div 
-                                        key={index} 
+                                    <div
+                                        key={index}
                                         className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
                                         onClick={() => handleViewAppointmentDetails(appointment._id)}
                                     >
@@ -750,7 +757,7 @@ const DoctorDashboardPage = () => {
                                     <p className="text-sm text-gray-500">Latest prescribed medications</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/prescriptions')}
                                 className="text-emerald-600 hover:text-emerald-700 font-medium text-sm cursor-pointer"
                             >
@@ -761,8 +768,8 @@ const DoctorDashboardPage = () => {
                         <div className="space-y-4">
                             {recentPrescriptions.length > 0 ? (
                                 recentPrescriptions.map((prescription, index) => (
-                                    <div 
-                                        key={index} 
+                                    <div
+                                        key={index}
                                         className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 cursor-pointer hover:border-emerald-200 transition-colors"
                                         onClick={() => handleViewPrescriptionDetails(prescription._id)}
                                     >
@@ -770,12 +777,11 @@ const DoctorDashboardPage = () => {
                                             <h4 className="font-medium text-gray-900">
                                                 {prescription.patientId?.name || 'Patient'}
                                             </h4>
-                                            <span className={`text-xs px-2 py-1 rounded-full ${
-                                                prescription.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                            <span className={`text-xs px-2 py-1 rounded-full ${prescription.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
                                                 prescription.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                                                prescription.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                'bg-gray-100 text-gray-700'
-                                            }`}>
+                                                    prescription.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                }`}>
                                                 {prescription.status || 'Active'}
                                             </span>
                                         </div>
@@ -821,7 +827,7 @@ const DoctorDashboardPage = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/appointments')}
                                 className="p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
                             >
@@ -831,7 +837,7 @@ const DoctorDashboardPage = () => {
                                 </div>
                             </button>
 
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/prescriptions/create')}
                                 className="p-6 bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200 rounded-xl hover:border-red-300 hover:shadow-md transition-all cursor-pointer"
                             >
@@ -841,7 +847,7 @@ const DoctorDashboardPage = () => {
                                 </div>
                             </button>
 
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/patients')}
                                 className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200 rounded-xl hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer"
                             >
@@ -851,7 +857,7 @@ const DoctorDashboardPage = () => {
                                 </div>
                             </button>
 
-                            <button 
+                            <button
                                 onClick={() => router.push('/doctor/records/create')}
                                 className="p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 rounded-xl hover:border-purple-300 hover:shadow-md transition-all cursor-pointer"
                             >
@@ -882,11 +888,11 @@ const DoctorDashboardPage = () => {
                     </div>
                 </div>
             </div>
-            
+
             {/* Close profile menu when clicking outside */}
             {showProfileMenu && (
-                <div 
-                    className="fixed inset-0 z-40 cursor-pointer" 
+                <div
+                    className="fixed inset-0 z-40 cursor-pointer"
                     onClick={() => setShowProfileMenu(false)}
                 />
             )}
