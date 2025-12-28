@@ -53,25 +53,37 @@ const DoctorDashboardPage = () => {
     const [doctorId, setDoctorId] = useState<string>('');
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [apiErrors, setApiErrors] = useState<string[]>([]);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        // Check if user is logged in
-        const token = localStorage.getItem('token');
-        const role = localStorage.getItem('role');
-        
-        if (!token || role !== 'doctor') {
-            router.push('/auth/doctor/login');
-            return;
-        }
-        
-        fetchDoctorProfile();
+        // Check authentication without blocking the UI
+        checkAuthentication();
     }, []);
 
+    const checkAuthentication = () => {
+        // Check localStorage for auth data
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            
+            if (token && role === 'doctor') {
+                setIsAuthenticated(true);
+                fetchDoctorProfile();
+            } else {
+                setIsAuthenticated(false);
+                setLoading(false);
+            }
+        } else {
+            setIsAuthenticated(false);
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        if (doctorId) {
+        if (doctorId && isAuthenticated) {
             fetchDashboardData();
         }
-    }, [doctorId]);
+    }, [doctorId, isAuthenticated]);
 
     const addApiError = (error: string) => {
         setApiErrors(prev => [...prev, `${new Date().toLocaleTimeString()}: ${error}`]);
@@ -97,6 +109,15 @@ const DoctorDashboardPage = () => {
         } catch (error: any) {
             console.error('Error fetching doctor profile:', error);
             addApiError(`Doctor profile: ${error.message}`);
+            
+            // If authentication fails, redirect to login
+            if (error.response?.status === 401) {
+                handleLogout();
+                return;
+            }
+            
+            // Use fallback name if API fails
+            setDoctorName('Doctor');
         }
     };
 
@@ -108,7 +129,77 @@ const DoctorDashboardPage = () => {
             console.log('Starting dashboard data fetch...');
             console.log('Doctor ID:', doctorId);
             
-            // 1. Fetch doctor's appointments - CORRECT ENDPOINT: /appointments/my
+            // Use mock data for development/testing
+            if (!doctorId || doctorId === '') {
+                console.log('Using mock data for development...');
+                
+                // Mock data for testing
+                setStats({
+                    totalPatients: 156,
+                    totalAppointments: 42,
+                    earnings: 12500,
+                    pendingAppointments: 8
+                });
+                
+                // Mock today's appointments
+                setTodaysAppointments([
+                    {
+                        _id: '1',
+                        patientId: { name: 'John Doe', _id: '1' },
+                        doctorId: { fee: 150, _id: '1' },
+                        appointmentDate: new Date().toISOString(),
+                        status: 'scheduled'
+                    },
+                    {
+                        _id: '2',
+                        patientId: { name: 'Jane Smith', _id: '2' },
+                        doctorId: { fee: 200, _id: '1' },
+                        appointmentDate: new Date().toISOString(),
+                        status: 'confirmed'
+                    }
+                ]);
+                
+                // Mock upcoming appointments
+                setUpcomingAppointments([
+                    {
+                        _id: '3',
+                        patientId: { name: 'Bob Johnson', _id: '3' },
+                        doctorId: { fee: 180, _id: '1' },
+                        appointmentDate: new Date(Date.now() + 86400000).toISOString(),
+                        status: 'confirmed'
+                    },
+                    {
+                        _id: '4',
+                        patientId: { name: 'Alice Williams', _id: '4' },
+                        doctorId: { fee: 220, _id: '1' },
+                        appointmentDate: new Date(Date.now() + 172800000).toISOString(),
+                        status: 'scheduled'
+                    }
+                ]);
+                
+                // Mock prescriptions
+                setRecentPrescriptions([
+                    {
+                        _id: '1',
+                        patientId: { name: 'John Doe', _id: '1' },
+                        status: 'active',
+                        date: new Date().toISOString(),
+                        medications: [{ name: 'Amoxicillin' }, { name: 'Paracetamol' }]
+                    },
+                    {
+                        _id: '2',
+                        patientId: { name: 'Jane Smith', _id: '2' },
+                        status: 'completed',
+                        date: new Date(Date.now() - 86400000).toISOString(),
+                        medications: [{ name: 'Ibuprofen' }]
+                    }
+                ]);
+                
+                setLoading(false);
+                return;
+            }
+            
+            // 1. Fetch doctor's appointments
             let appointments: Appointment[] = [];
             try {
                 const appointmentsResponse = await api.get('/appointments/my');
@@ -139,7 +230,7 @@ const DoctorDashboardPage = () => {
             setTodaysAppointments(todays.slice(0, 5));
             setUpcomingAppointments(upcoming);
             
-            // 2. Fetch doctor's prescriptions - CORRECT ENDPOINT: /prescriptions/doctor/my
+            // 2. Fetch doctor's prescriptions
             let prescriptions: Prescription[] = [];
             try {
                 const prescriptionsResponse = await api.get('/prescriptions/doctor/my');
@@ -159,8 +250,7 @@ const DoctorDashboardPage = () => {
             
             setRecentPrescriptions(prescriptions.slice(0, 5));
             
-            // 3. GET PATIENTS FROM APPOINTMENTS (not /patients/all)
-            // Doctors should only see their own patients from appointments
+            // 3. Get patients from appointments
             const uniquePatients = new Set<string>();
             appointments.forEach((apt: Appointment) => {
                 if (apt.patientId?._id) {
@@ -169,7 +259,7 @@ const DoctorDashboardPage = () => {
             });
             const totalPatients = uniquePatients.size;
             
-            // 4. Calculate earnings from appointments (not from /billing endpoint)
+            // 4. Calculate earnings from appointments
             let totalEarnings = 0;
             const completedAppointments = appointments.filter(apt => 
                 apt.status === 'completed' || apt.status === 'confirmed' || apt.status === 'paid'
@@ -210,9 +300,7 @@ const DoctorDashboardPage = () => {
                 });
                 
                 if (error.response.status === 401) {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('role');
-                    router.push('/auth/doctor/login');
+                    handleLogout();
                     return;
                 }
             }
@@ -315,6 +403,41 @@ const DoctorDashboardPage = () => {
         fetchDashboardData();
         fetchDoctorProfile();
     };
+
+    const handleLogin = () => {
+        router.push('/auth/doctor/login');
+    };
+
+    if (!isAuthenticated) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-8">
+                <div className="text-center max-w-md">
+                    <div className="w-20 h-20 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <User className="w-10 h-10 text-emerald-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Access Required</h3>
+                    <p className="text-gray-600 mb-8">
+                        You need to log in as a doctor to access the dashboard. Please sign in to continue.
+                    </p>
+                    <div className="space-y-4">
+                        <button
+                            onClick={handleLogin}
+                            className="w-full inline-flex items-center justify-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
+                        >
+                            <User className="w-5 h-5" />
+                            <span>Go to Doctor Login</span>
+                        </button>
+                        <button
+                            onClick={checkAuthentication}
+                            className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                            Retry Authentication
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
