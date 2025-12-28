@@ -54,26 +54,50 @@ const PatientDashboard = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadData = async () => {
+    try {
+      await Promise.all([
+        fetchPatientData(),
+        fetchAppointments()
+      ]);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        await Promise.all([
-          fetchPatientData(),
-          fetchAppointments()
-        ]);
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-      } finally {
-        setLoading(false);
+    loadData();
+
+    // Refresh data when the page becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Page became visible, refreshing data...");
+        loadData();
       }
     };
-    loadData();
+
+    // Also refresh when window gains focus
+    const handleFocus = () => {
+      console.log("Window gained focus, refreshing data...");
+      loadData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const fetchPatientData = async () => {
     try {
       const userResponse = await api.get('/auth/me');
       console.log("HealthMate Debug: User response:", userResponse.data);
+      console.log("HealthMate Debug: Full user response structure:", JSON.stringify(userResponse, null, 2));
 
       const userData = userResponse.data.data || userResponse.data;
       setPatientData(userData);
@@ -81,13 +105,21 @@ const PatientDashboard = () => {
       try {
         const profileResponse = await api.get('/patients/me');
         console.log("HealthMate Debug: Profile response:", profileResponse.data);
-        setPatientProfile(profileResponse.data);
+        console.log("HealthMate Debug: Full profile response structure:", JSON.stringify(profileResponse, null, 2));
+
+        // Try different possible response structures
+        const profileData = profileResponse.data.data || profileResponse.data.profile || profileResponse.data;
+        console.log("HealthMate Debug: Extracted profile data:", profileData);
+
+        setPatientProfile(profileData);
       } catch (e) {
-        console.warn("Could not fetch patient profile:", e);
+        console.error("Could not fetch patient profile - Full error:", e);
+        console.error("Error response:", e);
       }
 
     } catch (error) {
       console.error('Error fetching patient data:', error);
+      console.error('Error response:', error);
     }
   };
 
@@ -99,8 +131,8 @@ const PatientDashboard = () => {
       // The doctorId is already populated with doctor info, just rename it
       const appointmentsWithDoctors = appointmentsData.map((appointment: any) => ({
         ...appointment,
-        doctor: appointment.doctorId, // doctorId is already the doctor object!
-        doctorId: appointment.doctorId._id // Keep the actual ID
+        doctor: appointment.doctorId,
+        doctorId: appointment.doctorId._id
       }));
 
       setAppointments(appointmentsWithDoctors);
@@ -404,7 +436,6 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {/* Quick Stats Footer */}
       {/* Quick Stats Footer */}
       <div className="px-8 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
