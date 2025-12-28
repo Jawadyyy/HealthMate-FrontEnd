@@ -50,118 +50,256 @@ const DoctorDashboardPage = () => {
     const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
     const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>([]);
     const [doctorName, setDoctorName] = useState('Doctor');
+    const [doctorId, setDoctorId] = useState<string>('');
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [apiErrors, setApiErrors] = useState<string[]>([]);
 
     useEffect(() => {
-        fetchDashboardData();
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        
+        if (!token || role !== 'doctor') {
+            router.push('/auth/doctor/login');
+            return;
+        }
+        
         fetchDoctorProfile();
     }, []);
 
+    useEffect(() => {
+        if (doctorId) {
+            fetchDashboardData();
+        }
+    }, [doctorId]);
+
+    const addApiError = (error: string) => {
+        setApiErrors(prev => [...prev, `${new Date().toLocaleTimeString()}: ${error}`]);
+    };
+
     const fetchDoctorProfile = async () => {
         try {
+            console.log('Fetching doctor profile...');
             const response = await api.get('/doctors/me');
+            console.log('Doctor profile response:', response.data);
+            
             const doctorData = response.data;
-            setDoctorName(doctorData.name || doctorData.userId?.name || 'Doctor');
-        } catch (error) {
+            // Get name from user object or doctor data
+            const name = doctorData.userId?.name || doctorData.fullName || 'Doctor';
+            setDoctorName(name);
+            setDoctorId(doctorData._id || doctorData.userId?._id || '');
+            
+            // Store doctor ID in localStorage for later use
+            if (doctorData._id) {
+                localStorage.setItem('doctorId', doctorData._id);
+            }
+            
+        } catch (error: any) {
             console.error('Error fetching doctor profile:', error);
+            addApiError(`Doctor profile: ${error.message}`);
         }
     };
 
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
+            setApiErrors([]);
             
-            // Fetch doctor's appointments
-            const appointmentsResponse = await api.get('/appointments/my');
-            const appointments: Appointment[] = appointmentsResponse.data.data || appointmentsResponse.data || [];
+            console.log('Starting dashboard data fetch...');
+            console.log('Doctor ID:', doctorId);
+            
+            // 1. Fetch doctor's appointments - CORRECT ENDPOINT: /appointments/my
+            let appointments: Appointment[] = [];
+            try {
+                const appointmentsResponse = await api.get('/appointments/my');
+                appointments = Array.isArray(appointmentsResponse.data) ? appointmentsResponse.data : [];
+                console.log(`Found ${appointments.length} appointments`);
+            } catch (error: any) {
+                console.error('Error fetching appointments:', error);
+                addApiError(`Appointments: ${error.message}`);
+            }
             
             // Filter today's appointments
             const today = new Date().toISOString().split('T')[0];
             const todays = appointments.filter((apt: Appointment) => {
+                if (!apt.appointmentDate) return false;
                 const aptDate = new Date(apt.appointmentDate).toISOString().split('T')[0];
-                return aptDate === today && (apt.status === 'scheduled' || apt.status === 'pending');
+                return aptDate === today && (apt.status === 'scheduled' || apt.status === 'pending' || apt.status === 'confirmed');
             });
             
             // Filter upcoming appointments
             const upcoming = appointments.filter((apt: Appointment) => {
+                if (!apt.appointmentDate) return false;
                 const aptDate = new Date(apt.appointmentDate);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                return aptDate > today && (apt.status === 'scheduled' || apt.status === 'pending');
+                return aptDate > today && (apt.status === 'scheduled' || apt.status === 'pending' || apt.status === 'confirmed');
             }).slice(0, 5);
-            
-            // Fetch recent prescriptions
-            const prescriptionsResponse = await api.get('/prescriptions/doctor/my');
-            const prescriptions: Prescription[] = prescriptionsResponse.data.data || prescriptionsResponse.data || [];
-            
-            // Fetch statistics - FIXED: Removed duplicate 'data' property
-            const [patientsResponse, analyticsResponse, invoicesResponse] = await Promise.all([
-                api.get('/patients/all').catch(() => ({ data: [] })),
-                api.get('/analytics/appointments').catch(() => ({ data: { total: 0, pending: 0, revenue: 0 } })),
-                api.get('/billing/invoice/doctor/me').catch(() => ({ data: [] }))
-            ]);
-            
-            const patients = patientsResponse.data.data || patientsResponse.data || [];
-            const analytics = analyticsResponse.data;
-            const invoices = invoicesResponse.data.data || invoicesResponse.data || [];
-            
-            // Calculate total earnings from paid invoices
-            const totalEarnings = invoices
-                .filter((inv: any) => inv.status === 'paid')
-                .reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
             
             setTodaysAppointments(todays.slice(0, 5));
             setUpcomingAppointments(upcoming);
+            
+            // 2. Fetch doctor's prescriptions - CORRECT ENDPOINT: /prescriptions/doctor/my
+            let prescriptions: Prescription[] = [];
+            try {
+                const prescriptionsResponse = await api.get('/prescriptions/doctor/my');
+                prescriptions = Array.isArray(prescriptionsResponse.data) ? prescriptionsResponse.data : [];
+                console.log(`Found ${prescriptions.length} prescriptions`);
+            } catch (error: any) {
+                console.error('Error fetching prescriptions:', error);
+                // Try alternative endpoint
+                try {
+                    const altResponse = await api.get('/prescriptions/my');
+                    prescriptions = Array.isArray(altResponse.data) ? altResponse.data : [];
+                    console.log(`Found ${prescriptions.length} prescriptions using alternative endpoint`);
+                } catch (altError) {
+                    addApiError(`Prescriptions: ${error.message}`);
+                }
+            }
+            
             setRecentPrescriptions(prescriptions.slice(0, 5));
             
+            // 3. GET PATIENTS FROM APPOINTMENTS (not /patients/all)
+            // Doctors should only see their own patients from appointments
+            const uniquePatients = new Set<string>();
+            appointments.forEach((apt: Appointment) => {
+                if (apt.patientId?._id) {
+                    uniquePatients.add(apt.patientId._id);
+                }
+            });
+            const totalPatients = uniquePatients.size;
+            
+            // 4. Calculate earnings from appointments (not from /billing endpoint)
+            let totalEarnings = 0;
+            const completedAppointments = appointments.filter(apt => 
+                apt.status === 'completed' || apt.status === 'confirmed' || apt.status === 'paid'
+            );
+            
+            totalEarnings = completedAppointments.reduce((sum, apt) => {
+                return sum + (apt.doctorId?.fee || 0);
+            }, 0);
+            
+            // 5. Set statistics
             setStats({
-                totalPatients: patients.length,
-                totalAppointments: appointments.length,
-                earnings: totalEarnings,
-                pendingAppointments: appointments.filter((apt: Appointment) => apt.status === 'pending').length
+                totalPatients: totalPatients,
+                totalAppointments: appointments.length || 0,
+                earnings: totalEarnings || 0,
+                pendingAppointments: appointments.filter((apt: Appointment) => 
+                    apt.status === 'pending' || apt.status === 'scheduled'
+                ).length || 0
             });
             
-        } catch (error) {
-            console.error('Error fetching dashboard data:', error);
-            // Fallback mock data
+            console.log('Dashboard data loaded successfully:', {
+                patients: totalPatients,
+                appointments: appointments.length,
+                earnings: totalEarnings,
+                todayAppointments: todays.length,
+                upcomingAppointments: upcoming.length,
+                prescriptions: prescriptions.length
+            });
+            
+        } catch (error: any) {
+            console.error('Error in fetchDashboardData:', error);
+            
+            if (error.response) {
+                console.error('API Error Details:', {
+                    url: error.config?.url,
+                    status: error.response?.status,
+                    statusText: error.response?.statusText,
+                    data: error.response?.data
+                });
+                
+                if (error.response.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('role');
+                    router.push('/auth/doctor/login');
+                    return;
+                }
+            }
+            
+            addApiError(`Dashboard data: ${error.message}`);
+            
+            // Fallback mock data for development
             setStats({
                 totalPatients: 156,
                 totalAppointments: 42,
                 earnings: 12500,
                 pendingAppointments: 8
             });
+            
+            // Mock today's appointments
+            setTodaysAppointments([
+                {
+                    _id: '1',
+                    patientId: { name: 'John Doe', _id: '1' },
+                    doctorId: { fee: 150, _id: '1' },
+                    appointmentDate: new Date().toISOString(),
+                    status: 'scheduled'
+                }
+            ]);
+            
+            // Mock upcoming appointments
+            setUpcomingAppointments([
+                {
+                    _id: '2',
+                    patientId: { name: 'Jane Smith', _id: '2' },
+                    doctorId: { fee: 200, _id: '1' },
+                    appointmentDate: new Date(Date.now() + 86400000).toISOString(),
+                    status: 'confirmed'
+                }
+            ]);
+            
+            // Mock prescriptions
+            setRecentPrescriptions([
+                {
+                    _id: '1',
+                    patientId: { name: 'John Doe', _id: '1' },
+                    status: 'active',
+                    date: new Date().toISOString(),
+                    medications: [{ name: 'Amoxicillin' }]
+                }
+            ]);
+            
         } finally {
             setLoading(false);
         }
     };
 
     const formatTime = (dateString: string) => {
-        return new Date(dateString).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            return new Date(dateString).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return 'Invalid time';
+        }
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            return 'Invalid date';
+        }
     };
 
     const handleLogout = async () => {
         try {
             await api.post('/auth/log-out');
-            localStorage.removeItem('token');
-            localStorage.removeItem('role');
-            router.push('/auth/login/doctor');
         } catch (error) {
-            console.error('Error logging out:', error);
-            // Force logout anyway
+            console.error('Error during logout API call:', error);
+        } finally {
             localStorage.removeItem('token');
             localStorage.removeItem('role');
-            router.push('/auth/login/doctor');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('doctorId');
+            localStorage.removeItem('isLoggedIn');
+            router.push('/auth/doctor/login');
         }
     };
 
@@ -169,12 +307,13 @@ const DoctorDashboardPage = () => {
         router.push(`/doctor/appointments/${appointmentId}`);
     };
 
-    const handleViewPatientDetails = (patientId: string) => {
-        router.push(`/doctor/patients/${patientId}`);
-    };
-
     const handleViewPrescriptionDetails = (prescriptionId: string) => {
         router.push(`/doctor/prescriptions/${prescriptionId}`);
+    };
+
+    const refreshData = () => {
+        fetchDashboardData();
+        fetchDoctorProfile();
     };
 
     if (loading) {
@@ -198,8 +337,26 @@ const DoctorDashboardPage = () => {
                 <div className="mb-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Doctor Dashboard</h1>
+                            <div className="flex items-center gap-4">
+                                <h1 className="text-3xl font-bold text-gray-900">Doctor Dashboard</h1>
+                                <button
+                                    onClick={refreshData}
+                                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
+                                >
+                                    Refresh
+                                </button>
+                            </div>
                             <p className="text-gray-500 mt-2">Welcome back, {doctorName}! Here's your overview</p>
+                            
+                            {/* API Errors Display */}
+                            {apiErrors.length > 0 && (
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <p className="text-sm text-amber-700">
+                                        <AlertCircle className="inline w-4 h-4 mr-2" />
+                                        Some data may not be loading correctly. Check console for details.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="flex items-center space-x-4">
@@ -269,11 +426,11 @@ const DoctorDashboardPage = () => {
                     <div className="bg-white rounded-2xl shadow-lg shadow-emerald-500/5 border border-gray-200/50 p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Total Patients</p>
+                                <p className="text-sm font-medium text-gray-500">My Patients</p>
                                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalPatients}</p>
                                 <p className="text-xs text-emerald-600 mt-1 flex items-center">
                                     <TrendingUp className="w-3 h-3 mr-1" />
-                                    +12 this month
+                                    {stats.totalPatients > 0 ? 'From appointments' : 'No patients yet'}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
@@ -305,7 +462,7 @@ const DoctorDashboardPage = () => {
                                 <p className="text-3xl font-bold text-gray-900 mt-2">${stats.earnings.toLocaleString()}</p>
                                 <p className="text-xs text-emerald-600 mt-1 flex items-center">
                                     <TrendingUp className="w-3 h-3 mr-1" />
-                                    +8.5% from last month
+                                    {stats.earnings > 0 ? 'From completed appointments' : 'No earnings yet'}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -321,7 +478,7 @@ const DoctorDashboardPage = () => {
                                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.pendingAppointments}</p>
                                 <p className="text-xs text-amber-600 mt-1 flex items-center">
                                     <AlertCircle className="w-3 h-3 mr-1" />
-                                    Need confirmation
+                                    {stats.pendingAppointments > 0 ? 'Need confirmation' : 'All confirmed'}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -372,6 +529,14 @@ const DoctorDashboardPage = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-2">
+                                            <span className={`px-2 py-1 text-xs rounded-full ${
+                                                appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                                appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                                                appointment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-gray-100 text-gray-700'
+                                            }`}>
+                                                {appointment.status || 'scheduled'}
+                                            </span>
                                             <span className="text-sm font-medium text-gray-700">
                                                 ${appointment.doctorId?.fee || 100}
                                             </span>
@@ -387,7 +552,7 @@ const DoctorDashboardPage = () => {
                                         onClick={() => router.push('/doctor/appointments')}
                                         className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium text-sm cursor-pointer"
                                     >
-                                        Schedule Appointment
+                                        View Calendar
                                     </button>
                                 </div>
                             )}
@@ -496,9 +661,9 @@ const DoctorDashboardPage = () => {
                                         </p>
                                         <div className="flex items-center justify-between mt-3">
                                             <span className="text-xs text-gray-500">
-                                                {new Date(prescription.date).toLocaleDateString()}
+                                                {prescription.date ? new Date(prescription.date).toLocaleDateString() : 'No date'}
                                             </span>
-                                            <button className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center">
+                                            <button className="text-xs text-emerald-600 hover:text-emerald-700 flex items-center cursor-pointer">
                                                 View Details
                                                 <ChevronRight className="w-3 h-3 ml-1" />
                                             </button>
@@ -598,7 +763,7 @@ const DoctorDashboardPage = () => {
             {/* Close profile menu when clicking outside */}
             {showProfileMenu && (
                 <div 
-                    className="fixed inset-0 z-40" 
+                    className="fixed inset-0 z-40 cursor-pointer" 
                     onClick={() => setShowProfileMenu(false)}
                 />
             )}

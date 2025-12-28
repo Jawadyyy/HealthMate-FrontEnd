@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Filter, Search, CheckCircle, XCircle, Eye, MoreVertical, Phone, Video, MapPin } from 'lucide-react';
+import { Calendar, Clock, User, Filter, Search, CheckCircle, XCircle, Eye, MoreVertical, Phone, Video, MapPin, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api/api';
 
 interface Appointment {
     _id: string;
     doctorId: string;
-    patientId: any;
+    patientId: {
+        _id: string;
+        name: string;
+        email?: string;
+    };
     appointmentDate: string;
     status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
     type: 'in-person' | 'video' | 'phone';
@@ -24,6 +28,7 @@ const DoctorAppointmentsPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<'all' | 'today' | 'upcoming' | 'pending' | 'completed'>('today');
     const [searchTerm, setSearchTerm] = useState('');
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         fetchAppointments();
@@ -36,11 +41,14 @@ const DoctorAppointmentsPage = () => {
     const fetchAppointments = async () => {
         try {
             setLoading(true);
+            // Get doctor's appointments
             const response = await api.get('/appointments/my');
             const data = response.data.data || response.data || [];
+            console.log("Doctor appointments:", data);
             setAppointments(data);
         } catch (error) {
             console.error('Error fetching appointments:', error);
+            alert('Failed to load appointments');
         } finally {
             setLoading(false);
         }
@@ -81,6 +89,9 @@ const DoctorAppointmentsPage = () => {
             });
         }
 
+        // Sort by date (soonest first)
+        filtered.sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
+        
         setFilteredAppointments(filtered);
     };
 
@@ -119,12 +130,15 @@ const DoctorAppointmentsPage = () => {
 
     const handleUpdateStatus = async (id: string, status: 'completed' | 'cancelled') => {
         try {
+            setUpdating(true);
             await api.patch(`/appointments/update/${id}`, { status });
             alert(`Appointment marked as ${status}`);
             fetchAppointments();
         } catch (error) {
             console.error('Error updating appointment:', error);
             alert('Failed to update appointment');
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -319,15 +333,17 @@ const DoctorAppointmentsPage = () => {
                                                             <>
                                                                 <button
                                                                     onClick={() => handleUpdateStatus(appointment._id, 'completed')}
-                                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 cursor-pointer"
+                                                                    disabled={updating}
+                                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 >
-                                                                    Complete
+                                                                    {updating ? '...' : 'Complete'}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleUpdateStatus(appointment._id, 'cancelled')}
-                                                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 cursor-pointer"
+                                                                    disabled={updating}
+                                                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 >
-                                                                    Cancel
+                                                                    {updating ? '...' : 'Cancel'}
                                                                 </button>
                                                             </>
                                                         )}

@@ -4,9 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, GraduationCap, Building, Award, Save, Camera, Globe, Calendar } from 'lucide-react';
 import api from '@/lib/api/api';
 
+interface UserData {
+    name: string;
+    email: string;
+}
+
 interface DoctorProfile {
     _id: string;
-    userId: any;
+    userId: UserData | null;
     specialization: string;
     degrees: string[];
     experienceYears: number;
@@ -48,6 +53,58 @@ const DoctorProfilePage = () => {
         '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
     ];
 
+    // Transform data from backend to frontend format
+    const transformProfileFromBackend = (responseData: any): DoctorProfile => {
+        let degreesArray: string[] = [];
+        if (responseData.degrees) {
+            if (typeof responseData.degrees === 'string') {
+                // Split string by commas and trim each degree
+                degreesArray = responseData.degrees.split(',').map((d: string) => d.trim()).filter((d: string) => d !== '');
+            } else if (Array.isArray(responseData.degrees)) {
+                degreesArray = responseData.degrees;
+            }
+        }
+        
+        return {
+            _id: responseData._id || '',
+            userId: responseData.userId || null,
+            specialization: responseData.specialization || '',
+            degrees: degreesArray,
+            experienceYears: responseData.experienceYears || 0,
+            phone: responseData.phone || '',
+            hospital: responseData.hospitalName || '', // Map from hospitalName
+            address: responseData.address || '',
+            consultationFee: responseData.fee || 0, // Map from fee
+            availableDays: responseData.availableDays || [],
+            availableSlots: responseData.availableSlots || [],
+            bio: responseData.bio || '',
+            createdAt: responseData.createdAt || '',
+            updatedAt: responseData.updatedAt || ''
+        };
+    };
+
+    // Transform data from frontend to backend format
+    const transformProfileForBackend = (profile: DoctorProfile) => {
+        const transformed: any = {
+            specialization: profile.specialization,
+            degrees: profile.degrees.join(', '), // Convert array to string
+            experienceYears: profile.experienceYears,
+            phone: profile.phone,
+            hospitalName: profile.hospital, // Map to hospitalName
+            address: profile.address,
+            fee: profile.consultationFee, // Map to fee
+            availableDays: profile.availableDays,
+            availableSlots: profile.availableSlots,
+        };
+        
+        // Only include bio if it exists (since your schema doesn't have bio field)
+        if (profile.bio) {
+            transformed.bio = profile.bio;
+        }
+        
+        return transformed;
+    };
+
     useEffect(() => {
         fetchProfile();
     }, []);
@@ -56,7 +113,7 @@ const DoctorProfilePage = () => {
         try {
             setLoading(true);
             const response = await api.get('/doctors/me');
-            setProfile(response.data);
+            setProfile(transformProfileFromBackend(response.data));
         } catch (error) {
             console.error('Error fetching doctor profile:', error);
         } finally {
@@ -67,7 +124,8 @@ const DoctorProfilePage = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            await api.patch('/doctors/update', profile);
+            const dataToSend = transformProfileForBackend(profile);
+            await api.patch('/doctors/update', dataToSend);
             alert('Profile updated successfully!');
         } catch (error) {
             console.error('Error updating profile:', error);

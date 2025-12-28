@@ -13,6 +13,19 @@ interface Earning {
     status: 'paid' | 'pending' | 'refunded';
 }
 
+interface Appointment {
+    _id: string;
+    patientId: {
+        name: string;
+    };
+    doctorId: {
+        fee: number;
+    };
+    appointmentDate: string;
+    status: string;
+    service?: string;
+}
+
 const DoctorEarningsPage = () => {
     const [earnings, setEarnings] = useState<Earning[]>([]);
     const [filteredEarnings, setFilteredEarnings] = useState<Earning[]>([]);
@@ -22,11 +35,12 @@ const DoctorEarningsPage = () => {
         totalEarnings: 0,
         monthlyEarnings: 0,
         pendingAmount: 0,
-        averagePerPatient: 0
+        averagePerPatient: 0,
+        totalPatients: 0
     });
 
     useEffect(() => {
-        fetchEarnings();
+        fetchEarningsFromAppointments();
     }, []);
 
     useEffect(() => {
@@ -34,26 +48,47 @@ const DoctorEarningsPage = () => {
         calculateStats();
     }, [timeFilter, earnings]);
 
-    const fetchEarnings = async () => {
+    const fetchEarningsFromAppointments = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/billing/invoice/doctor/me');
-            const data = response.data.data || response.data || [];
             
-            // Transform invoices to earnings format
-            const earningsData = data.map((invoice: any) => ({
-                _id: invoice._id,
-                date: invoice.createdAt,
-                amount: invoice.amount,
-                patientName: invoice.patientId?.name || 'Patient',
-                service: invoice.serviceName,
-                status: invoice.status
-            }));
+            // Get doctor's appointments instead of billing endpoint
+            const response = await api.get('/appointments/my');
+            const appointments: Appointment[] = Array.isArray(response.data) ? response.data : [];
+            
+            console.log(`Found ${appointments.length} appointments for earnings calculation`);
+            
+            // Transform appointments to earnings format
+            const earningsData: Earning[] = appointments
+                .filter(appointment => 
+                    appointment.status === 'completed' || 
+                    appointment.status === 'confirmed' || 
+                    appointment.status === 'paid'
+                )
+                .map((appointment, index) => {
+                    // Determine status based on appointment status
+                    let status: 'paid' | 'pending' | 'refunded' = 'pending';
+                    if (appointment.status === 'paid' || appointment.status === 'completed') {
+                        status = 'paid';
+                    } else if (appointment.status === 'cancelled') {
+                        status = 'refunded';
+                    }
+                    
+                    return {
+                        _id: appointment._id || `appt-${index}`,
+                        date: appointment.appointmentDate || new Date().toISOString(),
+                        amount: appointment.doctorId?.fee || 100, // Default fee if not specified
+                        patientName: appointment.patientId?.name || 'Patient',
+                        service: appointment.service || 'Consultation',
+                        status: status
+                    };
+                });
             
             setEarnings(earningsData);
+            
         } catch (error) {
-            console.error('Error fetching earnings:', error);
-            // Mock data for demonstration
+            console.error('Error fetching appointments for earnings:', error);
+            // Fallback mock data
             const mockEarnings: Earning[] = [
                 { _id: '1', date: '2024-01-15', amount: 150, patientName: 'John Doe', service: 'Consultation', status: 'paid' },
                 { _id: '2', date: '2024-01-14', amount: 200, patientName: 'Jane Smith', service: 'Follow-up', status: 'paid' },
@@ -99,18 +134,22 @@ const DoctorEarningsPage = () => {
         const paidEarnings = earnings.filter(e => e.status === 'paid');
         const pendingEarnings = earnings.filter(e => e.status === 'pending');
         
+        // Calculate total earnings from paid appointments
         const total = paidEarnings.reduce((sum, e) => sum + e.amount, 0);
+        
+        // Calculate monthly earnings (last 30 days)
+        const now = new Date();
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(now.getMonth() - 1);
+        
         const monthly = paidEarnings
-            .filter(e => {
-                const now = new Date();
-                const monthAgo = new Date(now);
-                monthAgo.setMonth(now.getMonth() - 1);
-                return new Date(e.date) >= monthAgo;
-            })
+            .filter(e => new Date(e.date) >= monthAgo)
             .reduce((sum, e) => sum + e.amount, 0);
         
+        // Calculate pending amount
         const pending = pendingEarnings.reduce((sum, e) => sum + e.amount, 0);
         
+        // Calculate unique patients
         const uniquePatients = [...new Set(earnings.map(e => e.patientName))].length;
         const average = uniquePatients > 0 ? total / uniquePatients : 0;
 
@@ -118,7 +157,8 @@ const DoctorEarningsPage = () => {
             totalEarnings: total,
             monthlyEarnings: monthly,
             pendingAmount: pending,
-            averagePerPatient: average
+            averagePerPatient: average,
+            totalPatients: uniquePatients
         });
     };
 
@@ -132,11 +172,15 @@ const DoctorEarningsPage = () => {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        } catch (error) {
+            return 'Invalid date';
+        }
     };
 
     const getStatusColor = (status: string) => {
@@ -171,6 +215,10 @@ const DoctorEarningsPage = () => {
         window.URL.revokeObjectURL(url);
     };
 
+    const refreshEarnings = () => {
+        fetchEarningsFromAppointments();
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 to-green-50">
@@ -193,15 +241,23 @@ const DoctorEarningsPage = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Earnings & Revenue</h1>
-                            <p className="text-gray-500 mt-2">Track your earnings and financial performance</p>
+                            <p className="text-gray-500 mt-2">Track your earnings from appointments</p>
                         </div>
-                        <button
-                            onClick={downloadReport}
-                            className="flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                        >
-                            <Download className="w-4 h-4" />
-                            <span className="font-medium">Download Report</span>
-                        </button>
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={refreshEarnings}
+                                className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                                Refresh Data
+                            </button>
+                            <button
+                                onClick={downloadReport}
+                                className="flex items-center space-x-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="font-medium">Download Report</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -212,9 +268,8 @@ const DoctorEarningsPage = () => {
                             <div>
                                 <p className="text-sm font-medium text-emerald-800">Total Earnings</p>
                                 <p className="text-3xl font-bold text-emerald-900 mt-2">{formatCurrency(stats.totalEarnings)}</p>
-                                <p className="text-xs text-emerald-600 mt-1 flex items-center">
-                                    <TrendingUp className="w-3 h-3 mr-1" />
-                                    +12.5% from last month
+                                <p className="text-xs text-emerald-600 mt-1">
+                                    From {earnings.filter(e => e.status === 'paid').length} completed appointments
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -228,9 +283,8 @@ const DoctorEarningsPage = () => {
                             <div>
                                 <p className="text-sm font-medium text-blue-800">This Month</p>
                                 <p className="text-3xl font-bold text-blue-900 mt-2">{formatCurrency(stats.monthlyEarnings)}</p>
-                                <p className="text-xs text-blue-600 mt-1 flex items-center">
-                                    <TrendingUp className="w-3 h-3 mr-1" />
-                                    +8.2% from last month
+                                <p className="text-xs text-blue-600 mt-1">
+                                    Last 30 days
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -245,7 +299,7 @@ const DoctorEarningsPage = () => {
                                 <p className="text-sm font-medium text-amber-800">Pending Payments</p>
                                 <p className="text-3xl font-bold text-amber-900 mt-2">{formatCurrency(stats.pendingAmount)}</p>
                                 <p className="text-xs text-amber-600 mt-1">
-                                    From {earnings.filter(e => e.status === 'pending').length} invoices
+                                    From {earnings.filter(e => e.status === 'pending').length} appointments
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -260,7 +314,7 @@ const DoctorEarningsPage = () => {
                                 <p className="text-sm font-medium text-purple-800">Avg. per Patient</p>
                                 <p className="text-3xl font-bold text-purple-900 mt-2">{formatCurrency(stats.averagePerPatient)}</p>
                                 <p className="text-xs text-purple-600 mt-1">
-                                    Across all consultations
+                                    Across {stats.totalPatients} patients
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -339,9 +393,13 @@ const DoctorEarningsPage = () => {
                                             <div className="w-24 h-24 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                                 <BarChart3 className="w-12 h-12 text-emerald-600" />
                                             </div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-2">No earnings data</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                {earnings.length === 0 ? 'No earnings data yet' : 'No earnings found'}
+                                            </h3>
                                             <p className="text-gray-500 max-w-md mx-auto">
-                                                No earnings recorded for the selected time period
+                                                {earnings.length === 0 
+                                                    ? 'Earnings will appear here after you complete appointments'
+                                                    : 'No earnings recorded for the selected time period'}
                                             </p>
                                         </td>
                                     </tr>
@@ -356,7 +414,7 @@ const DoctorEarningsPage = () => {
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">Earnings Overview</h2>
-                            <p className="text-sm text-gray-500">Monthly revenue trend</p>
+                            <p className="text-sm text-gray-500">Calculated from completed appointments</p>
                         </div>
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center">
@@ -373,62 +431,85 @@ const DoctorEarningsPage = () => {
                         <div className="text-center">
                             <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                             <p className="text-gray-500">Earnings chart would appear here</p>
-                            <p className="text-sm text-gray-400">Connect to analytics API to view charts</p>
+                            <p className="text-sm text-gray-400">Based on appointment fees</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Payment Methods */}
+                {/* Additional Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white rounded-2xl shadow-lg shadow-emerald-500/5 border border-gray-200/50 p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">Payment Methods</h2>
-                                <p className="text-sm text-gray-500">Distribution by payment type</p>
+                                <h2 className="text-xl font-bold text-gray-900">How Earnings Are Calculated</h2>
+                                <p className="text-sm text-gray-500">Understanding your revenue</p>
                             </div>
                             <CreditCard className="w-6 h-6 text-gray-400" />
                         </div>
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Credit/Debit Card</span>
-                                <span className="font-bold text-gray-900">65%</span>
+                            <div className="text-sm text-gray-600">
+                                <p className="font-medium mb-1">• Based on completed appointments</p>
+                                <p className="text-gray-500">Only appointments marked as "completed" or "paid" count toward earnings</p>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Cash</span>
-                                <span className="font-bold text-gray-900">25%</span>
+                            <div className="text-sm text-gray-600">
+                                <p className="font-medium mb-1">• Using doctor's consultation fee</p>
+                                <p className="text-gray-500">Each appointment uses the fee set in your doctor profile</p>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Insurance</span>
-                                <span className="font-bold text-gray-900">8%</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Other</span>
-                                <span className="font-bold text-gray-900">2%</span>
+                            <div className="text-sm text-gray-600">
+                                <p className="font-medium mb-1">• Pending payments shown separately</p>
+                                <p className="text-gray-500">Appointments that are confirmed but not yet paid appear as pending</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-lg shadow-emerald-500/5 border border-gray-200/50 p-6">
                         <div className="mb-6">
-                            <h2 className="text-xl font-bold text-gray-900 mb-2">Top Services</h2>
-                            <p className="text-sm text-gray-500">Highest revenue generating services</p>
+                            <h2 className="text-xl font-bold text-gray-900 mb-2">Service Distribution</h2>
+                            <p className="text-sm text-gray-500">Revenue by service type</p>
                         </div>
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-gray-600">Consultation</span>
-                                <span className="font-bold text-gray-900">{formatCurrency(4500)}</span>
+                                <span className="font-bold text-gray-900">
+                                    {formatCurrency(
+                                        earnings
+                                            .filter(e => e.service === 'Consultation' && e.status === 'paid')
+                                            .reduce((sum, e) => sum + e.amount, 0)
+                                    )}
+                                </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Follow-up Visit</span>
-                                <span className="font-bold text-gray-900">{formatCurrency(3200)}</span>
+                                <span className="text-gray-600">Follow-up</span>
+                                <span className="font-bold text-gray-900">
+                                    {formatCurrency(
+                                        earnings
+                                            .filter(e => e.service === 'Follow-up' && e.status === 'paid')
+                                            .reduce((sum, e) => sum + e.amount, 0)
+                                    )}
+                                </span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-gray-600">Specialist Visit</span>
-                                <span className="font-bold text-gray-900">{formatCurrency(2800)}</span>
+                                <span className="font-bold text-gray-900">
+                                    {formatCurrency(
+                                        earnings
+                                            .filter(e => e.service === 'Specialist Visit' && e.status === 'paid')
+                                            .reduce((sum, e) => sum + e.amount, 0)
+                                    )}
+                                </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-600">Emergency Visit</span>
-                                <span className="font-bold text-gray-900">{formatCurrency(1500)}</span>
+                                <span className="text-gray-600">Other Services</span>
+                                <span className="font-bold text-gray-900">
+                                    {formatCurrency(
+                                        earnings
+                                            .filter(e => 
+                                                !['Consultation', 'Follow-up', 'Specialist Visit'].includes(e.service) && 
+                                                e.status === 'paid'
+                                            )
+                                            .reduce((sum, e) => sum + e.amount, 0)
+                                    )}
+                                </span>
                             </div>
                         </div>
                     </div>
