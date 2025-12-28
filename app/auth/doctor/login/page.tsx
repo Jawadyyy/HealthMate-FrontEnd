@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import styles from "../../auth.module.css";
+import styles from "../doctor.module.css";
 import { loginDoctor } from "@/lib/auth/auth";
 import { AxiosError } from "axios";
 

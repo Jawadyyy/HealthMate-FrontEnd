@@ -1,0 +1,205 @@
+/* =====================================================
+   DOCTOR LOGIN PAGE STYLES
+===================================================== */
+
+/* =====================================================
+   DOCTOR LOGIN FORM (Left side)
+===================================================== */
+.formPanel {
+    width: 50%;
+    height: 100%;
+    padding: 110.7px 45px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: white;
+}
+
+.formLogo {
+    margin-bottom: 18px;
+}
+
+.formLogo h2 {
+    color: #16a34a;
+    font-size: 23.4px;
+    font-weight: 700;
+    margin-bottom: 4.5px;
+    text-align: left;
+}
+
+.formLogo p {
+    color: #666;
+    font-size: 12.6px;
+    text-align: left;
+}
+
+.formPanel h1 {
+    font-size: 21.6px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 9px;
+    text-align: left;
+}
+
+.formPanel>p {
+    color: #666;
+    font-size: 12.6px;
+    margin-bottom: 27px;
+    text-align: left;
+}
+
+.formPanel input {
+    width: 100%;
+    padding: 10.8px 12.6px;
+    margin-bottom: 14.4px;
+    border: 0.9px solid #ddd;
+    border-radius: 5.4px;
+    font-size: 12.6px;
+    background: #f9f9f9;
+    transition: all 0.2s;
+}
+
+.formPanel input:focus {
+    outline: none;
+    border-color: #16a34a;
+    background: white;
+    box-shadow: 0 0 0 2.7px rgba(22, 163, 74, 0.09);
+}
+
+.formPanel input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.formPanel button[type="submit"] {
+    width: 100%;
+    padding: 10.8px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 5.4px;
+    font-size: 12.6px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 7.2px;
+    transition: all 0.2s;
+}
+
+.formPanel button[type="submit"]:hover:not(:disabled) {
+    background: #15803d;
+    transform: translateY(-0.9px);
+    box-shadow: 0 3.6px 10.8px rgba(22, 163, 74, 0.27);
+}
+
+.formPanel button[type="submit"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.availability {
+    margin-top: 22.5px;
+    font-size: 11.7px;
+    color: rgba(0, 0, 0, 0.5);
+    font-style: italic;
+    text-align: center;
+}
+
+/* Error Message */
+.error {
+    color: #dc2626;
+    background: #fef2f2;
+    padding: 9px 10.8px;
+    border-radius: 5.4px;
+    font-size: 12.6px;
+    margin-bottom: 14.4px;
+    border-left: 3.6px solid #dc2626;
+}
+
+/* =====================================================
+   DOCTOR CTA PANEL (Right side)
+===================================================== */
+.ctaPanel {
+    width: 50%;
+    padding: 72px 45px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.ctaPanel h1 {
+    font-size: 25.2px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    line-height: 1.3;
+}
+
+.ctaPanel p {
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 27px;
+    opacity: 0.9;
+    max-width: 252px;
+}
+
+.ctaPanel button {
+    padding: 9px 36px;
+    background: transparent;
+    color: white;
+    border: 1.8px solid white;
+    border-radius: 27px;
+    font-size: 12.6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.ctaPanel button:hover {
+    background: white;
+    color: #16a34a;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
+@media (max-width: 768px) {
+
+    .formPanel,
+    .ctaPanel {
+        width: 100%;
+        padding: 36px 27px;
+    }
+
+    .formPanel h1 {
+        font-size: 19.8px;
+    }
+
+    .ctaPanel h1 {
+        font-size: 23.4px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .formPanel,
+    .ctaPanel {
+        padding: 27px 18px;
+    }
+
+    .formPanel h1 {
+        font-size: 18px;
+    }
+
+    .ctaPanel h1 {
+        font-size: 21.6px;
+    }
+
+    .ctaPanel p,
+    .formPanel>p {
+        font-size: 11.7px;
+    }
+}

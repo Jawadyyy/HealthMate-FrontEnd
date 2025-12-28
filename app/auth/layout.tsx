@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import styles from "./auth.module.css";
+import styles from "./layout.module.css";
 
 // Import pages
 import PatientLoginPage from "./patient/login/page";

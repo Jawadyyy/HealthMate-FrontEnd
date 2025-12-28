@@ -1,20 +1,17 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import styles from "../../auth.module.css";
+import styles from "../patient.module.css";
 import { registerPatient, loginPatient } from "@/lib/auth/auth";
 import { AxiosError } from "axios";
 
 export default function PatientSignupPage() {
   const router = useRouter();
 
-  // Registration fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +19,6 @@ export default function PatientSignupPage() {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -46,50 +42,31 @@ export default function PatientSignupPage() {
     setLoading(true);
 
     try {
-      console.log("📝 Calling registerPatient API with:", { name, email });
-      
-      // Step 1: Register patient
       const registerResponse = await registerPatient(name, email, password);
-      console.log("✅ Registration successful:", registerResponse.data);
-
-      // Step 2: Log the user in after registration
-      console.log("🔐 Logging in user after registration...");
       const loginResponse = await loginPatient(email, password);
-      console.log("✅ Login response:", loginResponse.data);
 
       if (loginResponse.data.token) {
-        console.log("🔑 Token received:", loginResponse.data.token);
-        
-        // Store token and user info
         localStorage.setItem("token", loginResponse.data.token);
         localStorage.setItem("role", "patient");
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("email", email);
         localStorage.setItem("name", name);
-        console.log("✅ Token stored successfully");
 
-        // Redirect to profile setup page
-        console.log("🔄 Redirecting to /patient/profile-setup");
         router.push("/patient/profile-setup");
       } else {
-        console.error("❌ Login failed after registration");
         setError("Registration successful! Please log in with your credentials.");
         router.push("/auth/patient/login");
       }
     } catch (err) {
-      console.error("❌ Registration error:", err);
       const axiosError = err as AxiosError<{ message: string }>;
-      
+
       if (axiosError.response) {
-        console.error("Server error response:", axiosError.response.data);
         setError(
           axiosError.response.data?.message || "Registration failed. Please try again."
         );
       } else if (axiosError.request) {
-        console.error("Network error - no response received");
         setError("Unable to connect to server. Please try again.");
       } else {
-        console.error("Unexpected error:", axiosError.message);
         setError("An unexpected error occurred.");
       }
     } finally {
@@ -103,15 +80,13 @@ export default function PatientSignupPage() {
 
   return (
     <>
-      {/* Left: CTA Panel */}
       <div className={styles.ctaPanel}>
         <h1>Welcome Back!</h1>
         <p>To keep connected with us please login</p>
         <button onClick={goToLogin}>SIGN IN</button>
       </div>
 
-      {/* Right: Signup Form */}
-      <div className={`${styles.formPanel} ${styles.signupForm}`}>
+      <div className={styles.formPanel}>
         <div className={styles.formLogo}></div>
 
         <h1>Create Account</h1>
@@ -161,7 +136,7 @@ export default function PatientSignupPage() {
             {loading ? "Creating Account..." : "Sign Up & Continue"}
           </button>
         </form>
-        
+
         <p className={styles.loginRedirect}>
           Already have an account?{" "}
           <button onClick={goToLogin} className={styles.linkButton}>
