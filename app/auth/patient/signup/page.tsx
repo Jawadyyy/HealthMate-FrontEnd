@@ -7,7 +7,6 @@ import Link from "next/link";
 import styles from "../patient.module.css";
 import { registerPatient, loginPatient } from "@/lib/auth/auth";
 import { AxiosError } from "axios";
-import axios from "axios";
 
 export default function PatientSignupPage() {
   const router = useRouter();
@@ -109,9 +108,15 @@ export default function PatientSignupPage() {
 
     try {
       const authToken = token || localStorage.getItem("token");
+      const storedName = name || localStorage.getItem("name") || "";
 
       if (!authToken) {
         throw new Error("No authentication token found");
+      }
+
+      // Validate required fields
+      if (!age || !gender || !bloodGroup || !phone || !address || !emergencyContactName || !emergencyContactPhone) {
+        throw new Error("Please fill in all required fields");
       }
 
       // Prepare medical conditions array
@@ -120,37 +125,76 @@ export default function PatientSignupPage() {
         .map(condition => condition.trim())
         .filter(condition => condition.length > 0);
 
+      // Prepare the request body with fullName (not name/email)
+      const requestBody = {
+        fullName: storedName,
+        age: parseInt(age),
+        gender,
+        bloodGroup,
+        phone,
+        address,
+        emergencyContactName,
+        emergencyContactPhone,
+        medicalConditions: medicalConditionsArray.length > 0 ? medicalConditionsArray : []
+      };
+
+      console.log("Sending request to:", `${process.env.NEXT_PUBLIC_API_URL}/patients/create`);
+      console.log("Request body:", requestBody);
+      console.log("Auth token present:", !!authToken);
+
       // Call the /patients/create API
-      const response = await axios.post(
+      const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/patients/create`,
         {
-          age: parseInt(age),
-          gender,
-          bloodGroup,
-          phone,
-          address,
-          emergencyContactName,
-          emergencyContactPhone,
-          medicalConditions: medicalConditionsArray.length > 0 ? medicalConditionsArray : []
-        },
-        {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${authToken}`,
             "Content-Type": "application/json"
-          }
+          },
+          body: JSON.stringify(requestBody)
         }
       );
 
-      if (response.status === 201) {
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
+      // Try to get response body regardless of status
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log("Response data:", responseData);
+      } catch (parseError) {
+        console.error("Failed to parse response:", parseError);
+        const textResponse = await response.text();
+        console.log("Raw response:", textResponse);
+        throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
+      }
+
+      if (response.ok || response.status === 201) {
         // Profile created successfully, redirect to dashboard
+        console.log("Profile created successfully");
         router.push("/patient/dashboard");
+      } else {
+        // Handle error response
+        const errorMessage = responseData?.message ||
+          responseData?.error ||
+          `Failed to create profile. Status: ${response.status}`;
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error("Profile setup error:", err);
-      setError(
-        err.response?.data?.message ||
-        "Failed to create profile. Please try again."
-      );
+
+      // Set user-friendly error message
+      if (err.message.includes("already exists")) {
+        setError("Profile already exists. Redirecting to dashboard...");
+        setTimeout(() => router.push("/patient/dashboard"), 2000);
+      } else if (err.message.includes("authentication")) {
+        setError("Authentication failed. Please try logging in again.");
+      } else if (err.message.includes("network") || err.message.includes("fetch")) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError(err.message || "Failed to create profile. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
