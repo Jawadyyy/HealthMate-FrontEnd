@@ -2,12 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, User, Phone, Mail, Calendar, Activity, Heart, Thermometer, FileText, Pill, Plus, ChevronRight, MapPin, Clock } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, Calendar, Activity, Heart, Thermometer, FileText, Pill, Plus, ChevronRight, MapPin, Clock, Loader2, AlertCircle } from 'lucide-react';
 import api from '@/lib/api/api';
 
 interface Patient {
     _id: string;
-    userId: any;
+    userId: {
+        _id: string;
+        name: string;
+        email: string;
+    };
     age?: number;
     gender?: string;
     bloodGroup?: string;
@@ -48,6 +52,7 @@ const PatientDetailsPage = () => {
     const router = useRouter();
     const [patient, setPatient] = useState<Patient | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
     const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -60,12 +65,57 @@ const PatientDetailsPage = () => {
     const fetchPatientDetails = async () => {
         try {
             setLoading(true);
+            setError(null);
             
-            // Fetch patient
-            const patientResponse = await api.get(`/patients/${params.id}`);
-            setPatient(patientResponse.data);
+            // Check if this patient has appointments with current doctor
+            try {
+                const appointmentsResponse = await api.get('/appointments/my');
+                const allAppointments = appointmentsResponse.data.data || appointmentsResponse.data || [];
+                
+                const hasAccess = allAppointments.some((apt: any) => 
+                    apt.patientId?._id === params.id || apt.patientId === params.id
+                );
+                
+                if (!hasAccess) {
+                    throw new Error('You do not have access to this patient');
+                }
+            } catch (err) {
+                setError('Cannot verify patient access');
+                setLoading(false);
+                return;
+            }
             
-            // Fetch patient's appointments
+            // Fetch patient details (with restricted access)
+            try {
+                const patientResponse = await api.get(`/patients/profile/${params.id}`);
+                setPatient(patientResponse.data);
+            } catch (err) {
+                console.log('Could not fetch detailed patient profile, using basic info');
+                // Create basic patient info from appointments
+                const appointmentsResponse = await api.get('/appointments/my');
+                const allAppointments = appointmentsResponse.data.data || appointmentsResponse.data || [];
+                const patientAppointments = allAppointments.filter((apt: any) => 
+                    apt.patientId?._id === params.id || apt.patientId === params.id
+                );
+                
+                if (patientAppointments.length > 0) {
+                    const firstApt = patientAppointments[0];
+                    setPatient({
+                        _id: params.id as string,
+                        userId: {
+                            _id: params.id as string,
+                            name: firstApt.patientId?.name || 'Patient',
+                            email: firstApt.patientId?.email || ''
+                        },
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                } else {
+                    throw new Error('Patient not found');
+                }
+            }
+            
+            // Fetch patient's appointments with this doctor
             try {
                 const appointmentsResponse = await api.get(`/appointments/doctor/patient?patientId=${params.id}`);
                 setAppointments(appointmentsResponse.data.data || appointmentsResponse.data || []);
@@ -73,7 +123,7 @@ const PatientDetailsPage = () => {
                 console.error('Error fetching appointments:', error);
             }
             
-            // Fetch medical records
+            // Fetch medical records (if endpoint exists)
             try {
                 const recordsResponse = await api.get(`/medical-records/patient/${params.id}`);
                 setMedicalRecords(recordsResponse.data.data || recordsResponse.data || []);
@@ -81,7 +131,7 @@ const PatientDetailsPage = () => {
                 console.error('Error fetching medical records:', error);
             }
             
-            // Fetch prescriptions
+            // Fetch prescriptions (if endpoint exists)
             try {
                 const prescriptionsResponse = await api.get(`/prescriptions/patient/${params.id}`);
                 setPrescriptions(prescriptionsResponse.data.data || prescriptionsResponse.data || []);
@@ -89,10 +139,9 @@ const PatientDetailsPage = () => {
                 console.error('Error fetching prescriptions:', error);
             }
             
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching patient details:', error);
-            alert('Failed to load patient details');
-            router.push('/doctor/patients');
+            setError(error.message || 'Failed to load patient details');
         } finally {
             setLoading(false);
         }
@@ -151,6 +200,27 @@ const PatientDetailsPage = () => {
         );
     }
 
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 to-green-50">
+                <div className="text-center">
+                    <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle className="w-10 h-10 text-red-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h3>
+                    <p className="text-gray-600 mb-8">{error}</p>
+                    <button
+                        onClick={() => router.push('/doctor/patients')}
+                        className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Back to Patients</span>
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!patient) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 to-green-50">
@@ -159,7 +229,7 @@ const PatientDetailsPage = () => {
                         <User className="w-10 h-10 text-red-600" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Patient Not Found</h3>
-                    <p className="text-gray-600 mb-8">The patient you're looking for doesn't exist.</p>
+                    <p className="text-gray-600 mb-8">The patient you're looking for doesn't exist or you don't have access.</p>
                     <button
                         onClick={() => router.push('/doctor/patients')}
                         className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
@@ -229,7 +299,7 @@ const PatientDetailsPage = () => {
                                         )}
                                     </div>
                                     <p className="text-sm text-gray-500 mt-2">
-                                        Patient since {new Date(patient.createdAt).toLocaleDateString()}
+                                        {patient.createdAt && `Patient since ${formatDate(patient.createdAt)}`}
                                     </p>
                                 </div>
                             </div>
@@ -471,7 +541,7 @@ const PatientDetailsPage = () => {
                                                                 {formatDateTime(appointment.appointmentDate)}
                                                             </p>
                                                             <p className="text-sm text-gray-500 capitalize">
-                                                                {appointment.type.replace('-', ' ')}
+                                                                {appointment.type?.replace('-', ' ') || 'Appointment'}
                                                             </p>
                                                         </div>
                                                     </div>

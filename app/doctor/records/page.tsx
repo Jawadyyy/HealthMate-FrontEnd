@@ -29,6 +29,14 @@ interface MedicalRecord {
     }[];
 }
 
+interface Patient {
+    _id: string;
+    userId?: {
+        name?: string;
+    };
+    name?: string;
+}
+
 const DoctorRecordsPage = () => {
     const router = useRouter();
     const [records, setRecords] = useState<MedicalRecord[]>([]);
@@ -36,12 +44,12 @@ const DoctorRecordsPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<'all' | 'consultation' | 'lab-report' | 'diagnosis'>('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [patients, setPatients] = useState<any[]>([]);
+    const [patients, setPatients] = useState<Patient[]>([]);
     const [selectedPatient, setSelectedPatient] = useState<string>('all');
 
     useEffect(() => {
         fetchRecords();
-        fetchPatients();
+        fetchPatientsFromAppointments();
     }, []);
 
     useEffect(() => {
@@ -51,23 +59,48 @@ const DoctorRecordsPage = () => {
     const fetchRecords = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/medical-records/all');
+            // Changed from '/medical-records/all' to '/medical-records/my' - doctor's own records
+            const response = await api.get('/medical-records/my');
             const data = response.data.data || response.data || [];
             setRecords(data);
         } catch (error) {
             console.error('Error fetching records:', error);
+            // Fallback: try alternative endpoint
+            try {
+                const altResponse = await api.get('/medical-records');
+                const data = altResponse.data.data || altResponse.data || [];
+                setRecords(data);
+            } catch (altError) {
+                console.error('Alternative endpoint also failed:', altError);
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchPatients = async () => {
+    const fetchPatientsFromAppointments = async () => {
         try {
-            const response = await api.get('/patients/all');
-            const data = response.data.data || response.data || [];
-            setPatients(data);
+            // Get patients from doctor's appointments instead of /patients/all
+            const appointmentsResponse = await api.get('/appointments/my');
+            const appointments = Array.isArray(appointmentsResponse.data) ? appointmentsResponse.data : [];
+            
+            // Extract unique patients from appointments
+            const patientsMap = new Map<string, Patient>();
+            
+            appointments.forEach((appointment: any) => {
+                if (appointment.patientId?._id && appointment.patientId?.name) {
+                    if (!patientsMap.has(appointment.patientId._id)) {
+                        patientsMap.set(appointment.patientId._id, {
+                            _id: appointment.patientId._id,
+                            name: appointment.patientId.name
+                        });
+                    }
+                }
+            });
+            
+            setPatients(Array.from(patientsMap.values()));
         } catch (error) {
-            console.error('Error fetching patients:', error);
+            console.error('Error fetching patients from appointments:', error);
         }
     };
 
@@ -117,11 +150,26 @@ const DoctorRecordsPage = () => {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        } catch (error) {
+            return 'Invalid date';
+        }
+    };
+
+    const getPatientName = (record: MedicalRecord) => {
+        if (record.patientId?.name) return record.patientId.name;
+        if (record.patientId?.userId?.name) return record.patientId.userId.name;
+        
+        // Try to find patient from our patients list
+        const patient = patients.find(p => p._id === record.patientId?._id);
+        if (patient?.name) return patient.name;
+        
+        return 'Patient';
     };
 
     if (loading) {
@@ -162,7 +210,7 @@ const DoctorRecordsPage = () => {
                         <div className="bg-white rounded-2xl p-6 border border-gray-200/50">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500">Total Records</p>
+                                    <p className="text-sm text-gray-500">My Records</p>
                                     <p className="text-2xl font-bold text-gray-900 mt-2">{records.length}</p>
                                 </div>
                                 <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
@@ -247,12 +295,12 @@ const DoctorRecordsPage = () => {
                             <select
                                 value={selectedPatient}
                                 onChange={(e) => setSelectedPatient(e.target.value)}
-                                className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                                className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 min-w-[200px]"
                             >
                                 <option value="all">All Patients</option>
                                 {patients.map((patient) => (
                                     <option key={patient._id} value={patient._id}>
-                                        {patient.userId?.name || `Patient ${patient._id.slice(-6)}`}
+                                        {patient.name || patient.userId?.name || `Patient ${patient._id.slice(-6)}`}
                                     </option>
                                 ))}
                             </select>
@@ -285,7 +333,7 @@ const DoctorRecordsPage = () => {
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-gray-900">
-                                                            {record.patientId?.name || 'Patient'}
+                                                            {getPatientName(record)}
                                                         </div>
                                                         {record.patientId?.age && (
                                                             <div className="text-sm text-gray-500">
@@ -353,7 +401,7 @@ const DoctorRecordsPage = () => {
                                                             href={record.attachments[0].fileUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
                                                             title="Download Attachment"
                                                         >
                                                             <Download className="w-4 h-4" />
@@ -369,11 +417,15 @@ const DoctorRecordsPage = () => {
                                             <div className="w-24 h-24 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
                                                 <FileText className="w-12 h-12 text-emerald-600" />
                                             </div>
-                                            <h3 className="text-xl font-bold text-gray-900 mb-2">No records found</h3>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                {records.length === 0 ? 'No records yet' : 'No records found'}
+                                            </h3>
                                             <p className="text-gray-500 max-w-md mx-auto mb-8">
-                                                {searchTerm || selectedPatient !== 'all'
+                                                {records.length === 0 
+                                                    ? 'Medical records will appear here after you create them.'
+                                                    : searchTerm || selectedPatient !== 'all' || activeFilter !== 'all'
                                                     ? 'No records match your search criteria'
-                                                    : 'No medical records have been created yet'}
+                                                    : 'No records available'}
                                             </p>
                                             <button
                                                 onClick={() => router.push('/doctor/records/create')}

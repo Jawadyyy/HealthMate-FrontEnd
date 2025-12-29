@@ -1,0 +1,601 @@
+/* doctor.module.css */
+
+/* =====================================================
+   THEME VARIABLES
+===================================================== */
+:root {
+    --primary: #0d9488;
+    --primary-dark: #0f766e;
+    --primary-light: #ccfbf1;
+    --secondary: #3b82f6;
+    --dark: #0f172a;
+    --light: #f8fafc;
+    --gray: #64748b;
+    --gray-light: #e2e8f0;
+    --error: #dc2626;
+    --success: #10b981;
+    --warning: #f59e0b;
+}
+
+/* =====================================================
+   ANIMATIONS
+===================================================== */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-20px) rotate(180deg);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+/* =====================================================
+   PAGE CONTAINER
+===================================================== */
+.doctorPage {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dcfce7 100%);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.backgroundElements {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.circle1,
+.circle2,
+.circle3 {
+    position: absolute;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-light), transparent);
+    opacity: 0.1;
+}
+
+.circle1 {
+    width: 300px;
+    height: 300px;
+    top: -100px;
+    right: -100px;
+    animation: float 20s infinite ease-in-out;
+}
+
+.circle2 {
+    width: 200px;
+    height: 200px;
+    bottom: -50px;
+    left: -50px;
+    animation: float 15s infinite ease-in-out reverse;
+}
+
+.circle3 {
+    width: 150px;
+    height: 150px;
+    top: 50%;
+    right: 10%;
+    animation: float 25s infinite ease-in-out;
+}
+
+.gridPattern {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.3;
+}
+
+/* =====================================================
+   CARD CONTAINER
+===================================================== */
+.doctorCard {
+    width: 100%;
+    max-width: 1000px;
+    min-height: 600px;
+    background: white;
+    border-radius: 24px;
+    box-shadow:
+        0 20px 60px rgba(13, 148, 136, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* =====================================================
+   HOME BUTTON - Redesigned
+===================================================== */
+.homeButton {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--dark);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--gray-light);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.homeButton:hover {
+    background: white;
+    transform: translateX(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: var(--primary);
+}
+
+.homeButton svg {
+    transition: transform 0.3s ease;
+}
+
+.homeButton:hover svg {
+    transform: translateX(-2px);
+}
+
+/* =====================================================
+   LEFT: INFO PANEL (Professional Medical)
+===================================================== */
+.infoPanel {
+    width: 45%;
+    padding: 60px 50px;
+    background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    position: relative;
+    overflow: hidden;
+}
+
+.infoPanel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+}
+
+.medicalIcon {
+    margin-bottom: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 16px;
+    background: var(--primary);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+}
+
+.infoPanel h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #fff 0%, var(--primary-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.infoPanel>p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+    color: #cbd5e1;
+    max-width: 400px;
+}
+
+.features {
+    width: 100%;
+    margin-bottom: 40px;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 15px;
+    color: #e2e8f0;
+}
+
+.featureIcon {
+    width: 24px;
+    height: 24px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.disclaimer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary);
+    font-size: 14px;
+    color: #94a3b8;
+    margin-top: auto;
+    width: 100%;
+}
+
+.lockIcon {
+    font-size: 18px;
+}
+
+/* =====================================================
+   RIGHT: LOGIN PANEL (Clean Professional)
+===================================================== */
+.loginPanel {
+    width: 55%;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-top-right-radius: 24px;
+    border-bottom-right-radius: 24px;
+}
+
+.loginHeader {
+    margin-bottom: 40px;
+}
+
+.logoContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logoIcon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.logoText h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 0;
+}
+
+.logoText p {
+    font-size: 12px;
+    color: var(--gray);
+    margin: 2px 0 0 0;
+    letter-spacing: 0.5px;
+}
+
+.welcomeSection {
+    margin-bottom: 40px;
+}
+
+.welcomeSection h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 8px;
+}
+
+.welcomeSection p {
+    font-size: 15px;
+    color: var(--gray);
+    margin: 0;
+}
+
+.errorContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-radius: 12px;
+    border-left: 4px solid var(--error);
+    margin-bottom: 30px;
+    animation: pulse 2s infinite;
+}
+
+.errorIcon {
+    font-size: 20px;
+    color: var(--error);
+}
+
+.errorText {
+    color: var(--error);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.loginForm {
+    margin-bottom: 40px;
+}
+
+.inputGroup {
+    margin-bottom: 24px;
+}
+
+.inputGroup label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 8px;
+}
+
+.inputWithIcon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.inputWithIcon svg {
+    position: absolute;
+    left: 16px;
+    color: var(--gray);
+    pointer-events: none;
+}
+
+.inputWithIcon input {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    border: 2px solid var(--gray-light);
+    border-radius: 12px;
+    font-size: 15px;
+    background: white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inputWithIcon input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+}
+
+.inputWithIcon input:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+.loginButton {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.loginButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.loginButton:hover::before {
+    left: 100%;
+}
+
+.loginButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(13, 148, 136, 0.3);
+}
+
+.loginButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.helperLinks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.forgotLink,
+.registerLink {
+    font-size: 14px;
+    color: var(--gray);
+    text-decoration: none;
+    transition: color 0.3s;
+    font-weight: 500;
+}
+
+.forgotLink:hover {
+    color: var(--primary);
+}
+
+.registerLink {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.registerLink:hover {
+    color: var(--primary-dark);
+}
+
+.securityNote {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--dark);
+}
+
+.shieldIcon {
+    font-size: 18px;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
+@media (max-width: 1024px) {
+    .doctorCard {
+        max-width: 95%;
+    }
+
+    .infoPanel,
+    .loginPanel {
+        padding: 40px 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .doctorCard {
+        flex-direction: column;
+        min-height: auto;
+        max-width: 95%;
+        margin: 20px 0;
+    }
+
+    .infoPanel,
+    .loginPanel {
+        width: 100%;
+        padding: 40px 30px !important;
+    }
+
+    .infoPanel {
+        border-radius: 24px 24px 0 0 !important;
+        min-height: 400px;
+    }
+
+    .loginPanel {
+        border-radius: 0 0 24px 24px !important;
+    }
+
+    .homeButton {
+        top: 20px;
+        left: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .doctorCard {
+        margin: 10px;
+    }
+
+    .infoPanel,
+    .loginPanel {
+        padding: 30px 20px !important;
+    }
+
+    .infoPanel h1 {
+        font-size: 24px;
+    }
+
+    .welcomeSection h1 {
+        font-size: 22px;
+    }
+
+    .loginButton {
+        padding: 16px;
+    }
+}

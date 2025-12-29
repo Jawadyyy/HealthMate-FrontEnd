@@ -1,17 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Filter, Search, CheckCircle, XCircle, Eye, MoreVertical, Phone, Video, MapPin } from 'lucide-react';
+import { Calendar, Clock, User, Filter, Search, CheckCircle, XCircle, Eye, MoreVertical, Phone, Video, MapPin, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api/api';
 
 interface Appointment {
     _id: string;
     doctorId: string;
-    patientId: any;
+    patientId: {
+        _id: string;
+        name: string;
+        email?: string;
+    };
     appointmentDate: string;
     status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
-    type: 'in-person' | 'video' | 'phone';
+    type?: 'in-person' | 'video' | 'phone';
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -24,6 +28,7 @@ const DoctorAppointmentsPage = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<'all' | 'today' | 'upcoming' | 'pending' | 'completed'>('today');
     const [searchTerm, setSearchTerm] = useState('');
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         fetchAppointments();
@@ -36,11 +41,14 @@ const DoctorAppointmentsPage = () => {
     const fetchAppointments = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/appointments/my');
+            // Get doctor's appointments using the doctor endpoint
+            const response = await api.get('/appointments/my-doctor-appointments');
             const data = response.data.data || response.data || [];
+            console.log("Doctor appointments:", data);
             setAppointments(data);
         } catch (error) {
             console.error('Error fetching appointments:', error);
+            alert('Failed to load appointments');
         } finally {
             setLoading(false);
         }
@@ -55,13 +63,15 @@ const DoctorAppointmentsPage = () => {
             case 'today':
                 filtered = filtered.filter(apt => {
                     const aptDate = new Date(apt.appointmentDate).toISOString().split('T')[0];
-                    return aptDate === today && apt.status === 'scheduled';
+                    // Include both scheduled AND pending for today
+                    return aptDate === today && (apt.status === 'scheduled' || apt.status === 'pending');
                 });
                 break;
             case 'upcoming':
                 filtered = filtered.filter(apt => {
                     const aptDate = new Date(apt.appointmentDate);
-                    return aptDate > now && apt.status === 'scheduled';
+                    // Include both scheduled AND pending for upcoming
+                    return aptDate > now && (apt.status === 'scheduled' || apt.status === 'pending');
                 });
                 break;
             case 'pending':
@@ -80,6 +90,9 @@ const DoctorAppointmentsPage = () => {
                 return patientName.toLowerCase().includes(searchTerm.toLowerCase());
             });
         }
+
+        // Sort by date (soonest first)
+        filtered.sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
 
         setFilteredAppointments(filtered);
     };
@@ -109,22 +122,26 @@ const DoctorAppointmentsPage = () => {
         }
     };
 
-    const getAppointmentTypeIcon = (type: string) => {
+    const getAppointmentTypeIcon = (type?: string) => {
         switch (type) {
             case 'video': return <Video className="w-4 h-4" />;
             case 'phone': return <Phone className="w-4 h-4" />;
+            case 'in-person': return <MapPin className="w-4 h-4" />;
             default: return <MapPin className="w-4 h-4" />;
         }
     };
 
     const handleUpdateStatus = async (id: string, status: 'completed' | 'cancelled') => {
         try {
+            setUpdating(true);
             await api.patch(`/appointments/update/${id}`, { status });
             alert(`Appointment marked as ${status}`);
             fetchAppointments();
         } catch (error) {
             console.error('Error updating appointment:', error);
             alert('Failed to update appointment');
+        } finally {
+            setUpdating(false);
         }
     };
 
@@ -176,7 +193,7 @@ const DoctorAppointmentsPage = () => {
                                         {appointments.filter(a => {
                                             const aptDate = new Date(a.appointmentDate).toISOString().split('T')[0];
                                             const today = new Date().toISOString().split('T')[0];
-                                            return aptDate === today && a.status === 'scheduled';
+                                            return aptDate === today && (a.status === 'scheduled' || a.status === 'pending');
                                         }).length}
                                     </p>
                                 </div>
@@ -298,7 +315,9 @@ const DoctorAppointmentsPage = () => {
                                                 <td className="py-4 px-6">
                                                     <div className="flex items-center space-x-2">
                                                         {getAppointmentTypeIcon(appointment.type)}
-                                                        <span className="capitalize">{appointment.type.replace('-', ' ')}</span>
+                                                        <span className="capitalize">
+                                                            {appointment.type ? appointment.type.replace('-', ' ') : 'In-person'}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -315,19 +334,21 @@ const DoctorAppointmentsPage = () => {
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        {appointment.status === 'scheduled' && (
+                                                        {(appointment.status === 'scheduled' || appointment.status === 'pending') && (
                                                             <>
                                                                 <button
                                                                     onClick={() => handleUpdateStatus(appointment._id, 'completed')}
-                                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 cursor-pointer"
+                                                                    disabled={updating}
+                                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 >
-                                                                    Complete
+                                                                    {updating ? '...' : 'Complete'}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleUpdateStatus(appointment._id, 'cancelled')}
-                                                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 cursor-pointer"
+                                                                    disabled={updating}
+                                                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                                 >
-                                                                    Cancel
+                                                                    {updating ? '...' : 'Cancel'}
                                                                 </button>
                                                             </>
                                                         )}

@@ -50,36 +50,68 @@ const AppointmentsPage = () => {
             const response = await api.get('/appointments/my');
 
             const data = response.data.data || response.data || [];
+            console.log('Raw appointments:', data);
 
             // Fetch detailed doctor info including fee and availability
             const appointmentsWithDoctors = await Promise.all(
                 data.map(async (appointment: any) => {
                     try {
-                        // Fetch doctor details with fee and availability
-                        const doctorResponse = await api.get(`/doctors/${appointment.doctorId._id}`);
+                        console.log('Processing appointment:', appointment._id);
+                        console.log('DoctorId:', appointment.doctorId);
+
+                        // Extract doctor ID - handle both populated and non-populated
+                        let doctorId: string;
+
+                        if (typeof appointment.doctorId === 'string') {
+                            doctorId = appointment.doctorId;
+                        } else if (appointment.doctorId && typeof appointment.doctorId === 'object') {
+                            doctorId = appointment.doctorId._id || appointment.doctorId.toString();
+                        } else {
+                            console.error('Invalid doctorId format');
+                            return appointment;
+                        }
+
+                        console.log('Fetching doctor details for:', doctorId);
+
+                        const doctorResponse = await api.get(`/doctors/${doctorId}`);
                         const doctorData = doctorResponse.data.data || doctorResponse.data;
+
+                        console.log('Doctor data:', doctorData);
 
                         return {
                             ...appointment,
+                            doctorId: doctorId,
                             doctor: {
-                                ...appointment.doctorId,
+                                _id: doctorId,
+                                fullName: doctorData.fullName || doctorData.name,
+                                name: doctorData.name || doctorData.fullName,
+                                specialization: doctorData.specialization,
                                 fee: doctorData.fee,
                                 availability: doctorData.availability
-                            },
-                            doctorId: appointment.doctorId._id
+                            }
                         };
                     } catch (error) {
                         console.error('Error fetching doctor details:', error);
-                        // Fallback to basic doctor info if detailed fetch fails
+                        // Fallback to basic info if fetch fails
+                        const doctorId = typeof appointment.doctorId === 'string'
+                            ? appointment.doctorId
+                            : appointment.doctorId?._id || appointment.doctorId?.toString();
+
                         return {
                             ...appointment,
-                            doctor: appointment.doctorId,
-                            doctorId: appointment.doctorId._id
+                            doctorId: doctorId,
+                            doctor: {
+                                _id: doctorId,
+                                fullName: 'Doctor',
+                                name: 'Doctor',
+                                specialization: 'Specialist'
+                            }
                         };
                     }
                 })
             );
 
+            console.log('Appointments with doctors:', appointmentsWithDoctors);
             setAppointments(appointmentsWithDoctors);
         } catch (error) {
             console.error('Error fetching appointments:', error);
