@@ -15,7 +15,7 @@ interface Appointment {
     };
     appointmentDate: string;
     status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
-    type: 'in-person' | 'video' | 'phone';
+    type?: 'in-person' | 'video' | 'phone';
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -41,8 +41,8 @@ const DoctorAppointmentsPage = () => {
     const fetchAppointments = async () => {
         try {
             setLoading(true);
-            // Get doctor's appointments
-            const response = await api.get('/appointments/my');
+            // Get doctor's appointments using the doctor endpoint
+            const response = await api.get('/appointments/my-doctor-appointments');
             const data = response.data.data || response.data || [];
             console.log("Doctor appointments:", data);
             setAppointments(data);
@@ -63,13 +63,15 @@ const DoctorAppointmentsPage = () => {
             case 'today':
                 filtered = filtered.filter(apt => {
                     const aptDate = new Date(apt.appointmentDate).toISOString().split('T')[0];
-                    return aptDate === today && apt.status === 'scheduled';
+                    // Include both scheduled AND pending for today
+                    return aptDate === today && (apt.status === 'scheduled' || apt.status === 'pending');
                 });
                 break;
             case 'upcoming':
                 filtered = filtered.filter(apt => {
                     const aptDate = new Date(apt.appointmentDate);
-                    return aptDate > now && apt.status === 'scheduled';
+                    // Include both scheduled AND pending for upcoming
+                    return aptDate > now && (apt.status === 'scheduled' || apt.status === 'pending');
                 });
                 break;
             case 'pending':
@@ -91,7 +93,7 @@ const DoctorAppointmentsPage = () => {
 
         // Sort by date (soonest first)
         filtered.sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
-        
+
         setFilteredAppointments(filtered);
     };
 
@@ -120,10 +122,11 @@ const DoctorAppointmentsPage = () => {
         }
     };
 
-    const getAppointmentTypeIcon = (type: string) => {
+    const getAppointmentTypeIcon = (type?: string) => {
         switch (type) {
             case 'video': return <Video className="w-4 h-4" />;
             case 'phone': return <Phone className="w-4 h-4" />;
+            case 'in-person': return <MapPin className="w-4 h-4" />;
             default: return <MapPin className="w-4 h-4" />;
         }
     };
@@ -190,7 +193,7 @@ const DoctorAppointmentsPage = () => {
                                         {appointments.filter(a => {
                                             const aptDate = new Date(a.appointmentDate).toISOString().split('T')[0];
                                             const today = new Date().toISOString().split('T')[0];
-                                            return aptDate === today && a.status === 'scheduled';
+                                            return aptDate === today && (a.status === 'scheduled' || a.status === 'pending');
                                         }).length}
                                     </p>
                                 </div>
@@ -312,7 +315,9 @@ const DoctorAppointmentsPage = () => {
                                                 <td className="py-4 px-6">
                                                     <div className="flex items-center space-x-2">
                                                         {getAppointmentTypeIcon(appointment.type)}
-                                                        <span className="capitalize">{appointment.type.replace('-', ' ')}</span>
+                                                        <span className="capitalize">
+                                                            {appointment.type ? appointment.type.replace('-', ' ') : 'In-person'}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -329,7 +334,7 @@ const DoctorAppointmentsPage = () => {
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        {appointment.status === 'scheduled' && (
+                                                        {(appointment.status === 'scheduled' || appointment.status === 'pending') && (
                                                             <>
                                                                 <button
                                                                     onClick={() => handleUpdateStatus(appointment._id, 'completed')}

@@ -135,7 +135,7 @@ const HealthMateDoctorPortal = () => {
 
       // Get all appointments for this doctor
       console.log('Fetching appointments from /appointments/my...');
-      const appointmentsResponse = await api.get('/appointments/my');
+      const appointmentsResponse = await api.get('/appointments/my-doctor-appointments');
 
       console.log('Raw appointments response:', appointmentsResponse);
       console.log('Appointments data:', appointmentsResponse.data);
@@ -368,7 +368,7 @@ const HealthMateDoctorPortal = () => {
   const fetchPatientDetails = async (patientId: string) => {
     try {
       // Fetch patient's appointments with this doctor
-      const appointmentsResponse = await api.get(`/appointments/my`);
+      const appointmentsResponse = await api.get(`/appointments/my-doctor-appointments`);
       const allAppointments = appointmentsResponse.data || [];
 
       // Filter appointments for this specific patient

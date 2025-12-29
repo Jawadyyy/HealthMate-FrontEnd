@@ -9,7 +9,29 @@ interface NavItemProps {
     label: string;
     active?: boolean;
     badge?: number;
+    onClick?: () => void;
 }
+
+const handleLogout = async () => {
+    try {
+        // Call logout API
+        await fetch('/auth/log-out', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include', // Ensure cookies are sent
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        // Force a full page reload to login page
+        if (typeof window !== 'undefined') {
+            // Clear any cached data
+            window.location.replace('/auth/doctor/login');
+        }
+    }
+};
 
 const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active = false, badge }) => (
     <div
@@ -71,17 +93,27 @@ const DoctorSidebar = () => {
                     <NavItem icon={FileText} label="Prescriptions" active={isActive('/doctor/prescriptions')} badge={3} />
                 </div>
                 <div onClick={() => router.push('/doctor/records')}>
-                    <NavItem icon={Activity} label="Medical Records" active={isActive('/doctor/records')} />
+                    <NavItem icon={Activity} label="Medi
+                    cal Records" active={isActive('/doctor/records')} />
                 </div>
                 <div onClick={() => router.push('/doctor/earnings')}>
                     <NavItem icon={DollarSign} label="Earnings" active={isActive('/doctor/earnings')} />
                 </div>
-                
+
+                <div className="p-5 space-y-2 border-t border-gray-200/50">
+                    <NavItem
+                        icon={LogOut}
+                        label="Logout"
+                        onClick={handleLogout}
+                    />
+                </div>
+
+
             </nav>
 
-            
 
-            
+
+
         </div>
     );
 };
