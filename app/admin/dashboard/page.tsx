@@ -77,6 +77,7 @@ const AdminDashboard = () => {
     diseaseTrends: []
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'year'>('month');
 
@@ -85,10 +86,17 @@ const AdminDashboard = () => {
   }, [selectedTimeRange]);
 
   const loadDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    console.log('Loading dashboard data...');
+    
     try {
       await Promise.all([fetchAdminData(), fetchAnalytics()]);
+      console.log('Dashboard data loaded successfully');
     } catch (error) {
       console.error("Error loading admin dashboard data:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard data';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -96,16 +104,30 @@ const AdminDashboard = () => {
 
   const fetchAdminData = async () => {
     try {
+      console.log('Fetching admin data from /auth/me...');
       const response = await api.get('/auth/me');
+      console.log('Admin API response:', response);
+      console.log('Response data:', response.data);
+      console.log('Response data.data:', response.data?.data);
+      
       const userData = response.data.data || response.data;
-      setAdminData(userData);
+      console.log('Processed admin data:', userData);
+      
+      if (userData && userData.role) {
+        setAdminData(userData);
+      } else {
+        console.warn('Admin data missing role or invalid structure:', userData);
+      }
     } catch (error) {
       console.error('Error fetching admin data:', error);
+      console.error('Error details:', (error as any).response?.data || (error as Error).message);
     }
   };
 
   const fetchAnalytics = async () => {
     try {
+      console.log('Fetching analytics data...');
+      
       // Fetch basic analytics
       const [patientsRes, doctorsRes, appointmentsRes, revenueRes] = await Promise.all([
         api.get('/analytics/total-patients'),
@@ -113,6 +135,28 @@ const AdminDashboard = () => {
         api.get('/analytics/appointments'),
         api.get('/analytics/revenue')
       ]);
+
+      console.log('Patients response:', patientsRes.data);
+      console.log('Doctors response:', doctorsRes.data);
+      console.log('Appointments response:', appointmentsRes.data);
+      console.log('Revenue response:', revenueRes.data);
+
+      // Helper function to extract data consistently
+      const extractData = (response: any, keys: string[]): number => {
+        let data = response.data;
+        console.log('Extracting data from:', data);
+        
+        for (const key of keys) {
+          if (data && typeof data === 'object' && key in data) {
+            console.log(`Found key "${key}" in data:`, data[key]);
+            data = data[key];
+          }
+        }
+        
+        const result = typeof data === 'number' ? data : 0;
+        console.log('Extracted value:', result);
+        return result;
+      };
 
       // Fetch additional analytics data
       let topDoctorsData: { name: string; specialization: string; appointments: number; revenue: number }[] = [];
@@ -127,6 +171,9 @@ const AdminDashboard = () => {
           api.get('/analytics/disease-trends')
         ]);
 
+        console.log('Top doctors response:', topDoctorsRes.data);
+        console.log('Disease trends response:', diseaseTrendsRes.data);
+
         if (topDoctorsRes.data && Array.isArray(topDoctorsRes.data)) {
           topDoctorsData = topDoctorsRes.data.slice(0, 5).map((doctor: any) => ({
             name: doctor.name || doctor.fullName || `Dr. ${doctor._id?.substring(0, 8) || 'Unknown'}`,
@@ -134,6 +181,7 @@ const AdminDashboard = () => {
             appointments: doctor.appointmentCount || doctor.totalAppointments || 0,
             revenue: doctor.revenue || doctor.totalRevenue || 0
           }));
+          console.log('Processed top doctors:', topDoctorsData);
         }
 
         if (diseaseTrendsRes.data && Array.isArray(diseaseTrendsRes.data)) {
@@ -142,9 +190,11 @@ const AdminDashboard = () => {
             count: disease.count || disease.frequency || 0,
             trend: disease.trend || (index % 2 === 0 ? 'up' : 'down')
           }));
+          console.log('Processed disease trends:', diseaseTrendsData);
         }
       } catch (e) {
         console.log("Error fetching additional analytics:", e);
+        console.log("Error details:", (e as any).response?.data || (e as Error).message);
         // Use placeholder data when API fails
         topDoctorsData = getPlaceholderTopDoctors();
         diseaseTrendsData = getPlaceholderDiseaseTrends();
@@ -161,6 +211,8 @@ const AdminDashboard = () => {
 
       // Calculate active appointments from appointments data
       const appointmentsData = appointmentsRes.data || {};
+      console.log('Appointments data for active calculation:', appointmentsData);
+      
       const activeAppointments = appointmentsData.active || 
                                 appointmentsData.current || 
                                 appointmentsData.today || 
@@ -168,20 +220,28 @@ const AdminDashboard = () => {
                                 0;
 
       // Get all doctors to find pending approvals
-      const allDoctors = await api.get('/doctors/all');
-      const pendingDoctors = Array.isArray(allDoctors.data) ? 
-        allDoctors.data.filter((doctor: any) => 
-          doctor.status === 'pending' || 
-          doctor.approvalStatus === 'pending' ||
-          !doctor.isApproved
-        ) : [];
-      const pendingApprovals = pendingDoctors.length;
+      let pendingApprovals = 0;
+      try {
+        const allDoctors = await api.get('/doctors/all');
+        console.log('All doctors response:', allDoctors.data);
+        
+        const pendingDoctors = Array.isArray(allDoctors.data) ? 
+          allDoctors.data.filter((doctor: any) => 
+            doctor.status === 'pending' || 
+            doctor.approvalStatus === 'pending' ||
+            !doctor.isApproved
+          ) : [];
+        pendingApprovals = pendingDoctors.length;
+        console.log('Pending approvals count:', pendingApprovals);
+      } catch (e) {
+        console.log('Error fetching doctors for pending approvals:', e);
+      }
 
-      setAnalytics({
-        totalPatients: patientsRes.data?.total || patientsRes.data?.count || 0,
-        totalDoctors: doctorsRes.data?.total || doctorsRes.data?.count || 0,
-        totalAppointments: appointmentsRes.data?.total || appointmentsRes.data?.count || 0,
-        totalRevenue: revenueRes.data?.total || revenueRes.data?.amount || revenueRes.data?.revenue || 0,
+      const newAnalyticsData = {
+        totalPatients: extractData(patientsRes, ['total', 'count', 'data', 'patients']),
+        totalDoctors: extractData(doctorsRes, ['total', 'count', 'data', 'doctors']),
+        totalAppointments: extractData(appointmentsRes, ['total', 'count', 'data', 'appointments']),
+        totalRevenue: extractData(revenueRes, ['total', 'amount', 'revenue', 'data']),
         pendingApprovals,
         activeAppointments,
         appointmentsByDate: appointmentsByDateData,
@@ -189,12 +249,22 @@ const AdminDashboard = () => {
         patientGrowth: patientGrowthData,
         topDoctors: topDoctorsData.length > 0 ? topDoctorsData : getPlaceholderTopDoctors(),
         diseaseTrends: diseaseTrendsData.length > 0 ? diseaseTrendsData : getPlaceholderDiseaseTrends()
-      });
+      };
+
+      console.log('Setting analytics data:', newAnalyticsData);
+      setAnalytics(newAnalyticsData);
 
     } catch (error) {
-      console.error("Error fetching analytics:", error);
+      console.error("Full error details in fetchAnalytics:", {
+        message: (error as Error).message,
+        response: (error as any).response?.data,
+        status: (error as any).response?.status
+      });
       // Fallback to placeholder data if API calls fail
-      setAnalytics(getPlaceholderAnalytics());
+      const placeholderData = getPlaceholderAnalytics();
+      console.log('Using placeholder analytics data:', placeholderData);
+      setAnalytics(placeholderData);
+      setError('Failed to load analytics data. Showing placeholder data.');
     }
   };
 
@@ -301,6 +371,42 @@ const AdminDashboard = () => {
     return <LoadingScreen message="Loading admin dashboard..." />;
   }
 
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
+        <Sidebar pendingApprovals={analytics.pendingApprovals} />
+        
+        <div className="flex-1 overflow-auto ml-72 flex items-center justify-center">
+          <div className="text-center max-w-md p-8">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Error Loading Dashboard</h3>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <div className="flex flex-col space-y-3">
+              <button 
+                onClick={loadDashboardData}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 cursor-pointer"
+              >
+                Retry Loading Data
+              </button>
+              <button 
+                onClick={() => setError(null)}
+                className="px-6 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-50 border border-gray-200 rounded-xl transition-all duration-200 cursor-pointer"
+              >
+                Continue with Placeholder Data
+              </button>
+            </div>
+            <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left">
+              <p className="text-sm text-yellow-800 font-medium mb-2">Debug Information:</p>
+              <p className="text-xs text-yellow-700 mb-1">• Check browser console for API responses</p>
+              <p className="text-xs text-yellow-700 mb-1">• Verify backend API endpoints are running</p>
+              <p className="text-xs text-yellow-700">• Ensure authentication token is valid</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-white to-gray-50">
       <Sidebar pendingApprovals={analytics.pendingApprovals} />
@@ -318,7 +424,7 @@ const AdminDashboard = () => {
           <div className="flex items-center space-x-3">
             <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
             <span className="text-xs font-medium bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
-              Real-time Insights
+              {analytics.totalPatients > 0 ? 'Real-time Insights' : 'Demo Mode'}
             </span>
           </div>
           <div className="flex items-center space-x-3">
@@ -336,6 +442,24 @@ const AdminDashboard = () => {
             />
           </div>
         </div>
+
+        {analytics.totalPatients === 0 && analytics.totalDoctors === 0 && (
+          <div className="px-8 pb-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-2">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">
+                    No data received from APIs. Showing placeholder data.
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Check console for API response details.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <StatsGrid analytics={analytics} />
         <ChartsGrid analytics={analytics} />
