@@ -9,19 +9,27 @@ interface Appointment {
     _id: string;
     patientId: {
         _id: string;
-        userId: any;
+        userId: {
+            name: string;
+            email: string;
+        };
         phone?: string;
         address?: string;
+        age?: number;
+        gender?: string;
     };
     doctorId: {
         _id: string;
-        userId: any;
+        userId: {
+            name: string;
+        };
         specialization?: string;
         consultationFee?: number;
+        fee?: number;
     };
     appointmentDate: string;
-    status: 'pending' | 'scheduled' | 'completed' | 'cancelled';
-    type: 'in-person' | 'video' | 'phone';
+    status: 'pending' | 'scheduled' | 'completed' | 'cancelled' | 'confirmed';
+    type?: 'in-person' | 'video' | 'phone';
     notes?: string;
     duration?: number;
     reason?: string;
@@ -36,21 +44,86 @@ const AppointmentDetailsPage = () => {
     const [appointment, setAppointment] = useState<Appointment | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const appointmentId = params.id as string;
 
     useEffect(() => {
-        fetchAppointmentDetails();
+        fetchAppointments();
     }, [params.id]);
 
-    const fetchAppointmentDetails = async () => {
+    const fetchAppointments = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/appointments/${params.id}`);
-            console.log("Appointment details:", response.data);
-            setAppointment(response.data);
+            
+            // Try multiple endpoints
+            const endpoints = [
+                '/appointments/my',
+                '/appointments/my-doctor-appointments'
+            ];
+            
+            let allAppointments: Appointment[] = [];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    console.log(`Trying endpoint: ${endpoint}`);
+                    const response = await api.get(endpoint);
+                    
+                    if (Array.isArray(response.data)) {
+                        allAppointments = response.data;
+                        console.log(`✅ Found ${allAppointments.length} appointments from ${endpoint}`);
+                        break;
+                    } else if (response.data?.appointments) {
+                        allAppointments = response.data.appointments;
+                        console.log(`✅ Found ${allAppointments.length} appointments from ${endpoint}`);
+                        break;
+                    }
+                } catch (err) {
+                    console.log(`❌ Failed ${endpoint}:`, (err as any).response?.status);
+                    continue;
+                }
+            }
+            
+            setAppointments(allAppointments);
+            
+            // Find the specific appointment
+            const foundAppointment = allAppointments.find(apt => apt._id === appointmentId);
+            
+            if (foundAppointment) {
+                console.log("✅ Found appointment:", foundAppointment);
+                setAppointment(foundAppointment);
+            } else {
+                console.error("❌ Appointment not found in list");
+                alert('Appointment not found');
+                router.push('/doctor/appointments');
+            }
+            
         } catch (error) {
-            console.error('Error fetching appointment:', error);
+            console.error('Error fetching appointments:', error);
             alert('Failed to load appointment details');
             router.push('/doctor/appointments');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Alternative: If you have a direct endpoint for single appointment
+    const fetchAppointmentDirect = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get(`/appointments/my/${appointmentId}`);
+            console.log("Appointment details:", response.data);
+            setAppointment(response.data);
+        } catch (error: any) {
+            console.error('Error fetching appointment:', error);
+            
+            // If direct endpoint fails, try to get from list
+            if (error.response?.status === 404) {
+                console.log('Direct endpoint not found, trying list method...');
+                fetchAppointments();
+            } else {
+                alert('Failed to load appointment details');
+                router.push('/doctor/appointments');
+            }
         } finally {
             setLoading(false);
         }
@@ -65,9 +138,35 @@ const AppointmentDetailsPage = () => {
 
         try {
             setUpdating(true);
-            await api.patch(`/appointments/update/${params.id}`, { status: newStatus });
-            alert(`Appointment marked as ${newStatus}`);
-            fetchAppointmentDetails(); // Refresh data
+            
+            // Try multiple update endpoints
+            const endpoints = [
+                `/appointments/update/${appointmentId}`,
+                `/appointments/${appointmentId}`
+            ];
+            
+            let success = false;
+            
+            for (const endpoint of endpoints) {
+                try {
+                    console.log(`Trying update endpoint: ${endpoint}`);
+                    const response = await api.patch(endpoint, { status: newStatus });
+                    console.log(`✅ Update successful from ${endpoint}:`, response.data);
+                    success = true;
+                    break;
+                } catch (err) {
+                    console.log(`❌ Failed ${endpoint}:`, (err as any).response?.status);
+                    continue;
+                }
+            }
+            
+            if (success) {
+                alert(`Appointment marked as ${newStatus}`);
+                fetchAppointments(); // Refresh data
+            } else {
+                alert('Failed to update appointment. No working endpoint found.');
+            }
+            
         } catch (error) {
             console.error('Error updating appointment:', error);
             alert('Failed to update appointment');
@@ -76,25 +175,62 @@ const AppointmentDetailsPage = () => {
         }
     };
 
+    const cancelAppointment = async () => {
+        if (!appointment) return;
+
+        if (!confirm('Are you sure you want to cancel this appointment?')) {
+            return;
+        }
+
+        try {
+            setUpdating(true);
+            
+            // Try cancel endpoint
+            try {
+                await api.patch(`/appointments/cancel/${appointmentId}`);
+                alert('Appointment cancelled successfully');
+                fetchAppointments(); // Refresh data
+            } catch (err) {
+                // If cancel endpoint doesn't work, try update endpoint
+                await updateAppointmentStatus('cancelled');
+            }
+            
+        } catch (error) {
+            console.error('Error cancelling appointment:', error);
+            alert('Failed to cancel appointment');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const formatDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        return {
-            date: date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }),
-            time: date.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit'
-            })
-        };
+        try {
+            const date = new Date(dateString);
+            return {
+                date: date.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }),
+                time: date.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+            };
+        } catch {
+            return {
+                date: 'Invalid date',
+                time: 'Invalid time'
+            };
+        }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'scheduled': return 'bg-emerald-100 text-emerald-700';
+            case 'scheduled':
+            case 'confirmed': 
+                return 'bg-emerald-100 text-emerald-700';
             case 'pending': return 'bg-amber-100 text-amber-700';
             case 'completed': return 'bg-blue-100 text-blue-700';
             case 'cancelled': return 'bg-red-100 text-red-700';
@@ -102,7 +238,7 @@ const AppointmentDetailsPage = () => {
         }
     };
 
-    const getAppointmentTypeIcon = (type: string) => {
+    const getAppointmentTypeIcon = (type?: string) => {
         switch (type) {
             case 'video': return <Video className="w-5 h-5" />;
             case 'phone': return <PhoneCall className="w-5 h-5" />;
@@ -156,6 +292,8 @@ const AppointmentDetailsPage = () => {
     }
 
     const dateTime = formatDateTime(appointment.appointmentDate);
+    const patientName = appointment.patientId.userId?.name || 'Patient';
+    const doctorFee = appointment.doctorId.consultationFee || appointment.doctorId.fee || 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-4 md:p-8">
@@ -173,7 +311,7 @@ const AppointmentDetailsPage = () => {
                             </button>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">Appointment Details</h1>
-                                <p className="text-sm text-gray-500 mt-1">ID: APT-{appointment._id.slice(-8).toUpperCase()}</p>
+                                <p className="text-sm text-gray-500 mt-1">ID: {appointment._id.slice(-8).toUpperCase()}</p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -222,7 +360,7 @@ const AppointmentDetailsPage = () => {
                                             <div>
                                                 <p className="text-sm text-gray-500">Type</p>
                                                 <p className="text-lg font-bold text-gray-900 capitalize">
-                                                    {appointment.type.replace('-', ' ')} Consultation
+                                                    {appointment.type ? appointment.type.replace('-', ' ') + ' Consultation' : 'In-person Consultation'}
                                                 </p>
                                                 <p className="text-sm text-gray-600">{appointment.duration || 30} minutes</p>
                                             </div>
@@ -235,22 +373,6 @@ const AppointmentDetailsPage = () => {
                                         <h3 className="text-sm font-medium text-gray-700 mb-2">Reason for Visit</h3>
                                         <div className="p-4 bg-gray-50 rounded-xl">
                                             <p className="text-gray-900">{appointment.reason}</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {appointment.symptoms && appointment.symptoms.length > 0 && (
-                                    <div>
-                                        <h3 className="text-sm font-medium text-gray-700 mb-2">Reported Symptoms</h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            {appointment.symptoms.map((symptom, index) => (
-                                                <span
-                                                    key={index}
-                                                    className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-full"
-                                                >
-                                                    {symptom}
-                                                </span>
-                                            ))}
                                         </div>
                                     </div>
                                 )}
@@ -268,7 +390,7 @@ const AppointmentDetailsPage = () => {
                                     <div className="p-4 bg-gray-50 rounded-xl">
                                         <p className="text-sm text-gray-500">Consultation Fee</p>
                                         <p className="text-xl font-bold text-gray-900">
-                                            ${appointment.doctorId.consultationFee || 0}
+                                            ${doctorFee}
                                         </p>
                                     </div>
                                     <div className="p-4 bg-gray-50 rounded-xl">
@@ -300,10 +422,15 @@ const AppointmentDetailsPage = () => {
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="text-xl font-bold text-gray-900 mb-1">
-                                            {appointment.patientId.userId?.name || 'Patient'}
+                                            {patientName}
                                         </h3>
-                                        <div className="text-sm text-gray-600">
-                                            Patient ID: {appointment.patientId._id.slice(-8)}
+                                        <div className="text-sm text-gray-600 flex gap-4">
+                                            {appointment.patientId.age && (
+                                                <span>Age: {appointment.patientId.age}</span>
+                                            )}
+                                            {appointment.patientId.gender && (
+                                                <span>Gender: {appointment.patientId.gender}</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -359,7 +486,7 @@ const AppointmentDetailsPage = () => {
                             <h2 className="text-lg font-bold text-gray-900 mb-6">Actions</h2>
                             
                             <div className="space-y-3">
-                                {appointment.status === 'scheduled' && (
+                                {(appointment.status === 'scheduled' || appointment.status === 'confirmed' || appointment.status === 'pending') && (
                                     <>
                                         <button
                                             onClick={() => updateAppointmentStatus('completed')}
@@ -375,7 +502,7 @@ const AppointmentDetailsPage = () => {
                                         </button>
                                         
                                         <button
-                                            onClick={() => updateAppointmentStatus('cancelled')}
+                                            onClick={cancelAppointment}
                                             disabled={updating}
                                             className="w-full flex items-center justify-center space-x-2 p-4 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
@@ -451,7 +578,7 @@ const AppointmentDetailsPage = () => {
                                     <div>
                                         <p className="font-medium text-gray-900">Scheduled Time</p>
                                         <p className="text-sm text-gray-500 mt-1">
-                                            {formatDateTime(appointment.appointmentDate).date} at {formatDateTime(appointment.appointmentDate).time}
+                                            {dateTime.date} at {dateTime.time}
                                         </p>
                                     </div>
                                 </div>
@@ -465,7 +592,7 @@ const AppointmentDetailsPage = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">Appointment ID</span>
-                                    <span className="text-sm font-medium text-gray-900">APT-{appointment._id.slice(-8)}</span>
+                                    <span className="text-sm font-medium text-gray-900">{appointment._id.slice(-8)}</span>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
@@ -475,12 +602,12 @@ const AppointmentDetailsPage = () => {
                                 
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">Type</span>
-                                    <span className="text-sm font-medium text-gray-900 capitalize">{appointment.type}</span>
+                                    <span className="text-sm font-medium text-gray-900 capitalize">{appointment.type || 'in-person'}</span>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">Fee</span>
-                                    <span className="text-sm font-medium text-gray-900">${appointment.doctorId.consultationFee || 0}</span>
+                                    <span className="text-sm font-medium text-gray-900">${doctorFee}</span>
                                 </div>
                             </div>
                         </div>

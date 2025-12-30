@@ -31,6 +31,8 @@ interface Appointment {
     status: string;
     type: string;
     notes?: string;
+    patientId?: any; // Can be string or object
+    doctorId?: any; // Can be string or object
 }
 
 interface MedicalRecord {
@@ -38,6 +40,7 @@ interface MedicalRecord {
     type: string;
     title: string;
     date: string;
+    patientId?: string;
 }
 
 interface Prescription {
@@ -45,6 +48,8 @@ interface Prescription {
     date: string;
     status: string;
     medications: any[];
+    patientId?: string;
+    doctorId?: string;
 }
 
 const PatientDetailsPage = () => {
@@ -67,76 +72,152 @@ const PatientDetailsPage = () => {
             setLoading(true);
             setError(null);
             
-            // Check if this patient has appointments with current doctor
+            // First, get all appointments to check if patient has appointments with this doctor
             try {
                 const appointmentsResponse = await api.get('/appointments/my');
                 const allAppointments = appointmentsResponse.data.data || appointmentsResponse.data || [];
                 
-                const hasAccess = allAppointments.some((apt: any) => 
-                    apt.patientId?._id === params.id || apt.patientId === params.id
-                );
+                // Check if this patient has appointments with current doctor
+                const hasAccess = allAppointments.some((apt: Appointment) => {
+                    // Handle both string and object patientId
+                    const aptPatientId = typeof apt.patientId === 'string' 
+                        ? apt.patientId 
+                        : apt.patientId?._id;
+                    return aptPatientId === params.id;
+                });
                 
                 if (!hasAccess) {
                     throw new Error('You do not have access to this patient');
                 }
+                
+                // Filter appointments for this specific patient
+                const patientAppointments = allAppointments.filter((apt: Appointment) => {
+                    const aptPatientId = typeof apt.patientId === 'string' 
+                        ? apt.patientId 
+                        : apt.patientId?._id;
+                    return aptPatientId === params.id;
+                });
+                
+                setAppointments(patientAppointments);
             } catch (err) {
-                setError('Cannot verify patient access');
+                console.error('Error fetching appointments:', err);
+                setAppointments([]);
+            }
+            
+            // Try to fetch patient details from various endpoints
+            try {
+                // Try different patient endpoints
+                let patientData = null;
+                
+                try {
+                    // Try the main patients endpoint
+                    const response = await api.get(`/patients/${params.id}`);
+                    patientData = response.data;
+                } catch (err) {
+                    console.log('Could not fetch from /patients/{id}, trying /patients/me');
+                    // Try to get from user's own patient profile
+                    try {
+                        const response = await api.get('/patients/me');
+                        if (response.data && response.data._id === params.id) {
+                            patientData = response.data;
+                        } else {
+                            // Create basic patient info from appointments
+                            if (appointments.length > 0) {
+                                const firstApt = appointments[0];
+                                const patientInfo = typeof firstApt.patientId === 'string' 
+                                    ? { _id: firstApt.patientId, name: 'Patient' }
+                                    : firstApt.patientId || { _id: params.id, name: 'Patient' };
+                                
+                                patientData = {
+                                    _id: params.id,
+                                    userId: {
+                                        _id: patientInfo._id,
+                                        name: patientInfo.name || 'Patient',
+                                        email: ''
+                                    },
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString()
+                                };
+                            } else {
+                                throw new Error('Patient not found in appointments');
+                            }
+                        }
+                    } catch (innerErr) {
+                        console.log('Could not fetch patient details, using fallback data');
+                        throw new Error('Cannot fetch patient details');
+                    }
+                }
+                
+                if (patientData) {
+                    // Transform patient data to match our interface
+                    setPatient({
+                        _id: patientData._id,
+                        userId: {
+                            _id: patientData._id,
+                            name: patientData.name || patientData.fullName || patientData.userId?.name || 'Patient',
+                            email: patientData.email || patientData.userId?.email || ''
+                        },
+                        age: patientData.age,
+                        gender: patientData.gender,
+                        bloodGroup: patientData.bloodGroup,
+                        phone: patientData.phone,
+                        address: patientData.address,
+                        emergencyContactName: patientData.emergencyContactName,
+                        emergencyContactPhone: patientData.emergencyContactPhone,
+                        medicalConditions: Array.isArray(patientData.medicalConditions) 
+                            ? patientData.medicalConditions 
+                            : patientData.medicalConditions ? [patientData.medicalConditions] : [],
+                        allergies: Array.isArray(patientData.allergies) 
+                            ? patientData.allergies 
+                            : patientData.allergies ? [patientData.allergies] : [],
+                        createdAt: patientData.createdAt || new Date().toISOString(),
+                        updatedAt: patientData.updatedAt || new Date().toISOString()
+                    });
+                } else {
+                    throw new Error('Patient data not available');
+                }
+            } catch (error: any) {
+                console.error('Error fetching patient details:', error);
+                setError(error.message || 'Failed to load patient details');
                 setLoading(false);
                 return;
             }
             
-            // Fetch patient details (with restricted access)
+            // Fetch medical records for this patient
             try {
-                const patientResponse = await api.get(`/patients/profile/${params.id}`);
-                setPatient(patientResponse.data);
-            } catch (err) {
-                console.log('Could not fetch detailed patient profile, using basic info');
-                // Create basic patient info from appointments
-                const appointmentsResponse = await api.get('/appointments/my');
-                const allAppointments = appointmentsResponse.data.data || appointmentsResponse.data || [];
-                const patientAppointments = allAppointments.filter((apt: any) => 
-                    apt.patientId?._id === params.id || apt.patientId === params.id
-                );
+                // Try to get medical records where doctor has access
+                const recordsResponse = await api.get('/medical-records/my');
+                const allRecords = recordsResponse.data.data || recordsResponse.data || [];
                 
-                if (patientAppointments.length > 0) {
-                    const firstApt = patientAppointments[0];
-                    setPatient({
-                        _id: params.id as string,
-                        userId: {
-                            _id: params.id as string,
-                            name: firstApt.patientId?.name || 'Patient',
-                            email: firstApt.patientId?.email || ''
-                        },
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    });
-                } else {
-                    throw new Error('Patient not found');
-                }
-            }
-            
-            // Fetch patient's appointments with this doctor
-            try {
-                const appointmentsResponse = await api.get(`/appointments/doctor/patient?patientId=${params.id}`);
-                setAppointments(appointmentsResponse.data.data || appointmentsResponse.data || []);
-            } catch (error) {
-                console.error('Error fetching appointments:', error);
-            }
-            
-            // Fetch medical records (if endpoint exists)
-            try {
-                const recordsResponse = await api.get(`/medical-records/patient/${params.id}`);
-                setMedicalRecords(recordsResponse.data.data || recordsResponse.data || []);
+                // Filter records for this specific patient
+                const patientRecords = allRecords.filter((record: MedicalRecord) => {
+                    // Check if record belongs to this patient
+                    return record.patientId === params.id || 
+                           (record as any).patientId?._id === params.id;
+                });
+                
+                setMedicalRecords(patientRecords);
             } catch (error) {
                 console.error('Error fetching medical records:', error);
+                // Don't set error state here, just show empty records
             }
             
-            // Fetch prescriptions (if endpoint exists)
+            // Fetch prescriptions for this patient
             try {
-                const prescriptionsResponse = await api.get(`/prescriptions/patient/${params.id}`);
-                setPrescriptions(prescriptionsResponse.data.data || prescriptionsResponse.data || []);
+                // Try to get doctor's prescriptions
+                const prescriptionsResponse = await api.get('/prescriptions/doctor/my');
+                const allPrescriptions = prescriptionsResponse.data.data || prescriptionsResponse.data || [];
+                
+                // Filter prescriptions for this specific patient
+                const patientPrescriptions = allPrescriptions.filter((pres: Prescription) => {
+                    return pres.patientId === params.id || 
+                           (pres as any).patientId?._id === params.id;
+                });
+                
+                setPrescriptions(patientPrescriptions);
             } catch (error) {
                 console.error('Error fetching prescriptions:', error);
+                // Don't set error state here, just show empty prescriptions
             }
             
         } catch (error: any) {
@@ -148,34 +229,47 @@ const PatientDetailsPage = () => {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        } catch {
+            return 'Invalid date';
+        }
     };
 
     const formatDateTime = (dateString: string) => {
-        return new Date(dateString).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            return new Date(dateString).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return 'Invalid date';
+        }
     };
 
     const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'scheduled': return 'bg-emerald-100 text-emerald-700';
-            case 'completed': return 'bg-blue-100 text-blue-700';
-            case 'cancelled': return 'bg-red-100 text-red-700';
-            default: return 'bg-gray-100 text-gray-700';
+        switch (status?.toLowerCase()) {
+            case 'scheduled':
+            case 'pending':
+                return 'bg-emerald-100 text-emerald-700';
+            case 'completed':
+            case 'confirmed':
+                return 'bg-blue-100 text-blue-700';
+            case 'cancelled':
+                return 'bg-red-100 text-red-700';
+            default:
+                return 'bg-gray-100 text-gray-700';
         }
     };
 
     const handleNewAppointment = () => {
-        // Navigate to create appointment page with patient pre-selected
-        router.push(`/doctor/appointments?patientId=${params.id}`);
+        router.push(`/doctor/appointments/create?patientId=${params.id}`);
     };
 
     const handleNewPrescription = () => {
@@ -183,7 +277,7 @@ const PatientDetailsPage = () => {
     };
 
     const handleNewMedicalRecord = () => {
-        router.push(`/doctor/records/create?patientId=${params.id}`);
+        router.push(`/doctor/medical-records/create?patientId=${params.id}`);
     };
 
     if (loading) {
@@ -460,7 +554,7 @@ const PatientDetailsPage = () => {
                                                     <div>
                                                         <p className="text-sm text-red-800">Active Prescriptions</p>
                                                         <p className="text-2xl font-bold text-red-900 mt-2">
-                                                            {prescriptions.filter(p => p.status === 'active').length}
+                                                            {prescriptions.filter(p => p.status?.toLowerCase() === 'active').length}
                                                         </p>
                                                     </div>
                                                     <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
@@ -547,7 +641,7 @@ const PatientDetailsPage = () => {
                                                     </div>
                                                     <div className="flex items-center space-x-4">
                                                         <span className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                                                            {appointment.status}
+                                                            {appointment.status || 'scheduled'}
                                                         </span>
                                                         <ChevronRight className="w-4 h-4 text-gray-400" />
                                                     </div>
@@ -569,7 +663,7 @@ const PatientDetailsPage = () => {
                                                 <div
                                                     key={record._id}
                                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-                                                    onClick={() => router.push(`/doctor/records/${record._id}`)}
+                                                    onClick={() => router.push(`/doctor/medical-records/${record._id}`)}
                                                 >
                                                     <div className="flex items-center space-x-4">
                                                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -609,7 +703,7 @@ const PatientDetailsPage = () => {
                                                         </div>
                                                         <div>
                                                             <p className="font-medium text-gray-900">
-                                                                Prescription {prescription._id.slice(-6)}
+                                                                Prescription #{prescription._id.slice(-6).toUpperCase()}
                                                             </p>
                                                             <p className="text-sm text-gray-500">
                                                                 {formatDate(prescription.date)} • {prescription.medications.length} med(s)
@@ -618,7 +712,7 @@ const PatientDetailsPage = () => {
                                                     </div>
                                                     <div className="flex items-center space-x-4">
                                                         <span className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusColor(prescription.status)}`}>
-                                                            {prescription.status}
+                                                            {prescription.status || 'active'}
                                                         </span>
                                                         <ChevronRight className="w-4 h-4 text-gray-400" />
                                                     </div>
@@ -651,7 +745,7 @@ const PatientDetailsPage = () => {
                                         <div>
                                             <p className="text-sm font-medium text-gray-900">Appointment</p>
                                             <p className="text-xs text-gray-500 mt-1">
-                                                {formatDateTime(appointment.appointmentDate)}
+                                                {formatDateTime(appointment.appointmentDate)} - {appointment.status}
                                             </p>
                                         </div>
                                     </div>
@@ -687,7 +781,7 @@ const PatientDetailsPage = () => {
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">Appointment Frequency</span>
                                     <span className="text-sm font-medium text-gray-900">
-                                        {appointments.length > 0 ? 'Regular' : 'First-time'}
+                                        {appointments.length > 1 ? 'Regular' : 'First-time'}
                                     </span>
                                 </div>
                                 
@@ -695,7 +789,7 @@ const PatientDetailsPage = () => {
                                     <span className="text-sm text-gray-600">Last Appointment</span>
                                     <span className="text-sm text-gray-900">
                                         {appointments.length > 0 
-                                            ? formatDate(appointments[appointments.length - 1].appointmentDate)
+                                            ? formatDate(appointments[0].appointmentDate)
                                             : 'Never'
                                         }
                                     </span>
@@ -704,14 +798,14 @@ const PatientDetailsPage = () => {
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">Active Prescriptions</span>
                                     <span className="text-sm font-medium text-gray-900">
-                                        {prescriptions.filter(p => p.status === 'active').length}
+                                        {prescriptions.filter(p => p.status?.toLowerCase() === 'active').length}
                                     </span>
                                 </div>
                                 
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">Total Visits</span>
+                                    <span className="text-sm text-gray-600">Completed Visits</span>
                                     <span className="text-sm font-medium text-gray-900">
-                                        {appointments.filter(a => a.status === 'completed').length}
+                                        {appointments.filter(a => a.status?.toLowerCase() === 'completed').length}
                                     </span>
                                 </div>
                             </div>
