@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation'; // Add this import
 import { Search, Filter, Bell } from 'lucide-react';
 
 interface HeaderProps {
@@ -9,6 +10,8 @@ interface HeaderProps {
 }
 
 const DoctorHeader: React.FC<HeaderProps> = ({ doctorName = 'Doctor', doctorEmail = '' }) => {
+    const router = useRouter(); // Add router
+
     return (
         <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-8 py-4">
             <div className="flex items-center justify-between">
@@ -27,7 +30,11 @@ const DoctorHeader: React.FC<HeaderProps> = ({ doctorName = 'Doctor', doctorEmai
                     </button>
                 </div>
                 <div className="flex items-center space-x-5">
-                    <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer">
+                    {/* Add onClick to navigate to notifications */}
+                    <button 
+                        onClick={() => router.push('/doctor/notifications')} // Add this line
+                        className="relative p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 cursor-pointer"
+                    >
                         <Bell className="w-5 h-5 text-gray-600" />
                         <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
