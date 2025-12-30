@@ -306,14 +306,63 @@ const DoctorsModule = () => {
   };
 
   const handleStatusUpdate = async (doctorId: string, newStatus: Doctor['status']) => {
+    const doctor = doctors.find(d => d._id === doctorId);
+    if (!doctor) return;
+    
+    const statusMessages = {
+      active: 'activate',
+      inactive: 'deactivate',
+      pending: 'set to pending',
+      on_leave: 'mark as on leave'
+    };
+    
+    const message = `Are you sure you want to ${statusMessages[newStatus]} Dr. ${doctor.fullName}?`;
+    
+    if (!confirm(message)) {
+      return;
+    }
+    
     try {
-      await api.patch(DOCTORS_API.UPDATE, { id: doctorId, status: newStatus });
+      // Create a specific status update payload
+      const statusUpdateData = {
+        id: doctorId,
+        status: newStatus,
+        // Also update availability based on status
+        availability: newStatus === 'active' ? 'available' : 
+                     newStatus === 'on_leave' ? 'unavailable' : 'busy'
+      };
+
+      await api.patch(DOCTORS_API.UPDATE, statusUpdateData);
       
-      setDoctors(doctors.map(doctor => doctor._id === doctorId ? { ...doctor, status: newStatus } : doctor));
+      // Update local state
+      const updatedDoctors = doctors.map(doctor => {
+        if (doctor._id === doctorId) {
+          return { 
+            ...doctor, 
+            status: newStatus,
+            availability: statusUpdateData.availability
+          };
+        }
+        return doctor;
+      });
+      
+      setDoctors(updatedDoctors);
+      setFilteredDoctors(updatedDoctors.filter(doctor => 
+        filteredDoctors.some(d => d._id === doctor._id)
+      ));
+      
       fetchDoctorStats();
-      alert(`Doctor status updated to ${newStatus}`);
-    } catch (error) {
-      alert('Failed to update doctor status. Please try again.');
+      alert(`Doctor status updated to ${newStatus.replace('_', ' ')}`);
+    } catch (error: any) {
+      let errorMessage = 'Failed to update doctor status. ';
+      
+      if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else {
+        errorMessage += error.message || 'Network error';
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -405,17 +454,99 @@ const DoctorsModule = () => {
 
   const handleUpdateDoctor = async (doctorId: string, updateData: any) => {
     try {
-      const response = await api.patch(DOCTORS_API.UPDATE, { id: doctorId, ...updateData });
+      console.log('Updating doctor:', doctorId, updateData);
+      
+      // Prepare the data for API
+      const apiData = {
+        id: doctorId,
+        fullName: updateData.fullName,
+        specialization: updateData.specialization,
+        degrees: updateData.degrees,
+        phone: updateData.phone || '',
+        hospitalName: updateData.hospitalName || '',
+        experienceYears: parseInt(updateData.experienceYears) || 0,
+        fee: parseFloat(updateData.fee) || 0,
+        availableDays: updateData.availableDays || [],
+        availableSlots: updateData.availableSlots || [],
+        status: updateData.status || 'active',
+        availability: updateData.availability || 'available'
+      };
+
+      // Validate required fields
+      const requiredFields = ['fullName', 'specialization', 'degrees', 'experienceYears', 'fee'];
+      const missingFields = requiredFields.filter(field => !apiData[field as keyof typeof apiData] && apiData[field as keyof typeof apiData] !== 0);
+      
+      if (missingFields.length > 0) {
+        alert(`Missing required fields: ${missingFields.join(', ')}`);
+        return;
+      }
+
+      const response = await api.patch(DOCTORS_API.UPDATE, apiData);
       
       if (response.data) {
+        // Update the doctors list with the new data
         setDoctors(doctors.map(doctor => 
-          doctor._id === doctorId ? { ...doctor, ...updateData } : doctor
+          doctor._id === doctorId ? { 
+            ...doctor, 
+            ...apiData,
+            // Ensure numeric fields are properly typed
+            experienceYears: apiData.experienceYears,
+            fee: apiData.fee,
+            rating: doctor.rating || 0,
+            totalAppointments: doctor.totalAppointments || 0,
+            revenue: doctor.revenue || 0
+          } : doctor
         ));
+        
+        // Also update filtered doctors if needed
+        setFilteredDoctors(prevFiltered => 
+          prevFiltered.map(doctor => 
+            doctor._id === doctorId ? { 
+              ...doctor, 
+              ...apiData,
+              experienceYears: apiData.experienceYears,
+              fee: apiData.fee
+            } : doctor
+          )
+        );
+        
         setIsEditModalOpen(false);
+        setSelectedDoctor(null);
+        
+        // Show success message
         alert('Doctor updated successfully!');
+        
+        // Refresh stats if needed
+        fetchDoctorStats();
+      } else {
+        throw new Error('No data received from server');
       }
-    } catch (error) {
-      alert('Failed to update doctor. Please try again.');
+    } catch (error: any) {
+      console.error('Update doctor error:', error);
+      
+      let errorMessage = 'Failed to update doctor. ';
+      
+      if (error.response) {
+        if (error.response.status === 400) {
+          errorMessage += 'Bad request. Please check your input data.';
+        } else if (error.response.status === 404) {
+          errorMessage += 'Doctor not found.';
+        } else if (error.response.status === 500) {
+          errorMessage += 'Server error. Please try again later.';
+        } else if (error.response.data?.message) {
+          errorMessage += error.response.data.message;
+        } else if (error.response.data?.error) {
+          errorMessage += error.response.data.error;
+        } else {
+          errorMessage += `Server responded with status ${error.response.status}`;
+        }
+      } else if (error.request) {
+        errorMessage += 'No response from server. Please check your connection.';
+      } else {
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -1740,13 +1871,17 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
     specialization: doctor.specialization,
     degrees: doctor.degrees,
     phone: doctor.phone || '',
+    email: doctor.email || '',
     hospitalName: doctor.hospitalName || '',
     experienceYears: doctor.experienceYears.toString(),
     fee: doctor.fee.toString(),
     availableDays: doctor.availableDays || [],
     availableSlots: doctor.availableSlots || [],
     status: doctor.status,
-    availability: doctor.availability
+    availability: doctor.availability,
+    location: doctor.location || '',
+    address: doctor.address || '',
+    bio: doctor.bio || ''
   });
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -1760,6 +1895,11 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
     if (!formData.degrees.trim()) newErrors.degrees = 'Degrees/Qualifications are required';
     if (!formData.experienceYears || parseInt(formData.experienceYears) < 0) newErrors.experienceYears = 'Valid experience is required';
     if (!formData.fee || parseFloat(formData.fee) <= 0) newErrors.fee = 'Valid consultation fee is required';
+    
+    // Validate email format if provided
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1776,11 +1916,18 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
     setIsSubmitting(true);
     
     try {
-      await onSubmit(doctor._id, { 
-        ...formData, 
-        experienceYears: parseInt(formData.experienceYears), 
-        fee: parseFloat(formData.fee)
-      });
+      const updateData = {
+        ...formData,
+        experienceYears: parseInt(formData.experienceYears),
+        fee: parseFloat(formData.fee),
+        // Include optional fields only if they have values
+        ...(formData.email && { email: formData.email }),
+        ...(formData.location && { location: formData.location }),
+        ...(formData.address && { address: formData.address }),
+        ...(formData.bio && { bio: formData.bio })
+      };
+      
+      await onSubmit(doctor._id, updateData);
     } catch (error) {
       console.error('Form submission error:', error);
     } finally {
@@ -1825,9 +1972,41 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
               <h2 className="text-2xl font-bold text-gray-900">Edit Doctor</h2>
               <p className="text-sm text-gray-500 mt-1">Update doctor information</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => {
+                  // Reload doctor data
+                  const currentDoctor = JSON.parse(JSON.stringify(doctor));
+                  if (currentDoctor) {
+                    setFormData({
+                      fullName: currentDoctor.fullName,
+                      specialization: currentDoctor.specialization,
+                      degrees: currentDoctor.degrees,
+                      phone: currentDoctor.phone || '',
+                      email: currentDoctor.email || '',
+                      hospitalName: currentDoctor.hospitalName || '',
+                      experienceYears: currentDoctor.experienceYears.toString(),
+                      fee: currentDoctor.fee.toString(),
+                      availableDays: currentDoctor.availableDays || [],
+                      availableSlots: currentDoctor.availableSlots || [],
+                      status: currentDoctor.status,
+                      availability: currentDoctor.availability,
+                      location: currentDoctor.location || '',
+                      address: currentDoctor.address || '',
+                      bio: currentDoctor.bio || ''
+                    });
+                    alert('Form data refreshed with latest values');
+                  }
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                title="Refresh form data"
+              >
+                <RefreshCw className="w-4 h-4 text-gray-500" />
+              </button>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
         </div>
         <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
@@ -1868,6 +2047,21 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  <input 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleChange} 
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="doctor@example.com"
+                  />
+                  {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Specialization <span className="text-red-500">*</span>
                   </label>
                   <select 
@@ -1900,6 +2094,18 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
                     value={formData.hospitalName} 
                     onChange={handleChange} 
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input 
+                    type="text" 
+                    name="location" 
+                    value={formData.location} 
+                    onChange={handleChange} 
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="City, State"
                   />
                 </div>
               </div>
@@ -1955,6 +2161,33 @@ const EditDoctorModal: React.FC<{ doctor: Doctor; onClose: () => void; onSubmit:
                     />
                     {errors.fee && <p className="mt-1 text-sm text-red-600">{errors.fee}</p>}
                   </div>
+                </div>
+              </div>
+
+              {/* Address and Bio */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <textarea 
+                    name="address" 
+                    value={formData.address} 
+                    onChange={handleChange} 
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Full address"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                  <textarea 
+                    name="bio" 
+                    value={formData.bio} 
+                    onChange={handleChange} 
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Doctor's biography and background"
+                  />
                 </div>
               </div>
 

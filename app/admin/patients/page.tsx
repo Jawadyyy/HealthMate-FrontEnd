@@ -13,11 +13,10 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 
-// Updated interface to match API fields
+// Updated interface to match actual API fields
 interface Patient {
-  _id: string; 
-  name?: string;  // Optional since API doesn't have name field
-  email?: string; // Optional since API doesn't have email field
+  _id: string;
+  fullName: string;
   age: number;
   gender: 'male' | 'female' | 'other' | string;
   bloodGroup: string;
@@ -32,33 +31,55 @@ interface Patient {
   createdAt?: string;
   updatedAt?: string;
   totalVisits?: number;
-  occupation?: string;
-  allergies?: string[];
-  insuranceProvider?: string;
-  insuranceId?: string;
+  email?: string; // Optional email field
 }
 
 interface PatientStats {
-  total: number; active: number; inactive: number; pending: number;
-  newThisMonth: number; appointmentsToday: number; averageAge?: number;
+  total: number; 
+  active: number; 
+  inactive: number; 
+  pending: number;
+  newThisMonth: number; 
+  appointmentsToday: number; 
+  averageAge?: number;
   genderDistribution?: { male: number; female: number; other: number };
 }
 
-interface FilterState { status: string; gender: string; search: string; dateRange: string; }
+interface FilterState { 
+  status: string; 
+  gender: string; 
+  search: string; 
+  dateRange: string; 
+}
 
 interface Appointment {
-  _id: string; patientId: string; doctorId: string; doctorName: string;
-  date: string; time: string; status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
-  type: 'consultation' | 'followup' | 'emergency' | 'checkup'; fee: number; paid: boolean;
+  _id: string; 
+  patientId: string; 
+  doctorId: string; 
+  doctorName: string;
+  date: string; 
+  time: string; 
+  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  type: 'consultation' | 'followup' | 'emergency' | 'checkup'; 
+  fee: number; 
+  paid: boolean;
 }
 
 interface MedicalRecord {
-  _id: string; patientId: string; doctorId: string; doctorName: string;
-  date: string; diagnosis: string; symptoms: string[]; treatment: string;
-  medications: string[]; notes: string; followupDate?: string;
+  _id: string; 
+  patientId: string; 
+  doctorId: string; 
+  doctorName: string;
+  date: string; 
+  diagnosis: string; 
+  symptoms: string[]; 
+  treatment: string;
+  medications: string[]; 
+  notes: string; 
+  followupDate?: string;
 }
 
-// Updated API URLs - Using patients instead of patients
+// Updated API URLs to match actual endpoints
 const PATIENTS_API = {
   ALL: '/patients/all',
   CREATE: '/patients/create',
@@ -89,7 +110,14 @@ const PatientsModule = () => {
   const router = useRouter();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [stats, setStats] = useState<PatientStats>({ total: 0, active: 0, inactive: 0, pending: 0, newThisMonth: 0, appointmentsToday: 0 });
+  const [stats, setStats] = useState<PatientStats>({ 
+    total: 0, 
+    active: 0, 
+    inactive: 0, 
+    pending: 0, 
+    newThisMonth: 0, 
+    appointmentsToday: 0 
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,7 +127,12 @@ const PatientsModule = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({ status: 'all', gender: 'all', search: '', dateRange: 'all' });
+  const [filters, setFilters] = useState<FilterState>({ 
+    status: 'all', 
+    gender: 'all', 
+    search: '', 
+    dateRange: 'all' 
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
 
@@ -132,11 +165,14 @@ const PatientsModule = () => {
         patientsData = response.data.map((patient: any, index: number) => {
           console.log(`Processing patient ${index}:`, patient);
           
+          // Generate email from name if not provided
+          const email = patient.email || 
+            `${patient.fullName?.toLowerCase().replace(/\s+/g, '.')}@example.com` || 
+            `patient${index + 1}@example.com`;
+          
           const processedPatient: Patient = {
             _id: patient._id || patient.id || `temp-${Date.now()}-${index}`,
-            // Generate a display name since API doesn't provide name field
-            name: patient.name || `Patient ${patient._id?.substring(0, 8) || index + 1}`,
-            email: patient.email || `patient${patient._id?.substring(0, 8) || index + 1}@example.com`,
+            fullName: patient.fullName || `Patient ${patient._id?.substring(0, 8) || index + 1}`,
             age: patient.age || 0,
             gender: patient.gender || 'other',
             bloodGroup: patient.bloodGroup || 'Unknown',
@@ -149,7 +185,8 @@ const PatientsModule = () => {
             lastVisit: patient.lastVisit || new Date().toISOString(),
             createdAt: patient.createdAt || new Date().toISOString(),
             updatedAt: patient.updatedAt || new Date().toISOString(),
-            totalVisits: patient.totalVisits || 0
+            totalVisits: patient.totalVisits || 0,
+            email: email
           };
           
           console.log(`Patient ${index} processed:`, processedPatient);
@@ -271,7 +308,7 @@ const PatientsModule = () => {
       if (!patientData) {
         patientData = {
           _id: patientId,
-          name: `Patient ${patientId.substring(0, 8)}`,
+          fullName: `Patient ${patientId.substring(0, 8)}`,
           age: 0,
           gender: 'other',
           bloodGroup: 'Unknown',
@@ -314,7 +351,7 @@ const PatientsModule = () => {
       // Create a fallback patient object if the API call fails
       setSelectedPatient({
         _id: patientId,
-        name: `Patient ${patientId.substring(0, 8)}`,
+        fullName: `Patient ${patientId.substring(0, 8)}`,
         age: 0,
         gender: 'other',
         bloodGroup: 'Unknown',
@@ -340,7 +377,7 @@ const PatientsModule = () => {
       console.log('API endpoint:', PATIENTS_API.CREATE);
       
       // Validate required fields based on API
-      const requiredFields = ['age', 'gender', 'bloodGroup', 'phone', 'address', 'emergencyContactName', 'emergencyContactPhone'];
+      const requiredFields = ['fullName', 'age', 'gender', 'bloodGroup', 'phone', 'address', 'emergencyContactName', 'emergencyContactPhone'];
       const missingFields = requiredFields.filter(field => !patientData[field] && patientData[field] !== 0);
       
       if (missingFields.length > 0) {
@@ -350,6 +387,7 @@ const PatientsModule = () => {
       
       // Prepare data exactly matching API structure
       const apiData = {
+        fullName: patientData.fullName,
         age: parseInt(patientData.age) || 0,
         gender: patientData.gender,
         bloodGroup: patientData.bloodGroup,
@@ -370,7 +408,7 @@ const PatientsModule = () => {
       if (response.data) {
         const newPatient: Patient = {
           _id: response.data.id || response.data._id || `temp-${Date.now()}`,
-          name: `Patient ${(response.data._id || response.data.id || Date.now().toString()).substring(0, 8)}`,
+          fullName: response.data.fullName || apiData.fullName,
           age: response.data.age || apiData.age,
           gender: response.data.gender || apiData.gender,
           bloodGroup: response.data.bloodGroup || apiData.bloodGroup,
@@ -382,7 +420,8 @@ const PatientsModule = () => {
           status: 'active',
           lastVisit: new Date().toISOString(),
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          email: response.data.email || `${apiData.fullName.toLowerCase().replace(/\s+/g, '.')}@example.com`
         };
         
         console.log('Created new patient object:', newPatient);
@@ -524,7 +563,7 @@ const PatientsModule = () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(patient =>
-        patient.name?.toLowerCase().includes(query) ||
+        patient.fullName?.toLowerCase().includes(query) ||
         patient.phone.includes(searchQuery) ||
         patient._id.toLowerCase().includes(query) ||
         patient.address.toLowerCase().includes(query) ||
@@ -898,10 +937,10 @@ const PatientCard: React.FC<{
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-            {patient.name?.charAt(0) || 'P'}
+            {patient.fullName?.charAt(0) || 'P'}
           </div>
           <div>
-            <h3 className="font-bold text-gray-900">{patient.name || 'Patient'}</h3>
+            <h3 className="font-bold text-gray-900">{patient.fullName || 'Patient'}</h3>
             <p className="text-xs text-gray-500 flex items-center">
               <GenderIcon className="w-3 h-3 mr-1" />
               {patient.gender === 'male' ? 'Male' : patient.gender === 'female' ? 'Female' : 'Other'} • {patient.age} years
@@ -1129,10 +1168,10 @@ const PatientDetailModal: React.FC<{
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                {patient.name?.charAt(0) || 'P'}
+                {patient.fullName?.charAt(0) || 'P'}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{patient.name || 'Patient'}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{patient.fullName || 'Patient'}</h2>
                 <div className="flex items-center space-x-3 mt-2">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(patient.status)}`}>
                     {patient.status === 'active' && <CheckCircle className="w-4 h-4 mr-1" />}
@@ -1162,11 +1201,13 @@ const PatientDetailModal: React.FC<{
               </h3>
               <div className="space-y-3">
                 <DetailRow label="Patient ID" value={patient._id} />
+                <DetailRow label="Full Name" value={patient.fullName || 'Not provided'} />
                 <DetailRow label="Age" value={`${patient.age} years`} />
                 <DetailRow label="Gender" value={getGenderText(patient.gender)} />
                 <DetailRow label="Phone" value={patient.phone || 'No phone'} icon={Phone} />
                 <DetailRow label="Address" value={patient.address || 'Not provided'} icon={MapPin} />
                 <DetailRow label="Emergency Contact" value={`${patient.emergencyContactName || 'Not provided'} - ${patient.emergencyContactPhone || 'No phone'}`} icon={Contact} />
+                {patient.email && <DetailRow label="Email" value={patient.email} icon={Mail} />}
                 {patient.lastVisit && <DetailRow label="Last Visit" value={formatDate(patient.lastVisit)} icon={Calendar} />}
                 {patient.createdAt && <DetailRow label="Member Since" value={formatDate(patient.createdAt)} />}
               </div>
@@ -1198,18 +1239,6 @@ const PatientDetailModal: React.FC<{
                     }
                   </div>
                 </div>
-                {patient.allergies && patient.allergies.length > 0 && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Allergies</p>
-                    <div className="flex flex-wrap gap-2">
-                      {patient.allergies.map((allergy, index) => (
-                        <span key={index} className="text-sm bg-yellow-100 text-yellow-600 px-3 py-1.5 rounded-lg">
-                          {allergy}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 <div className="flex justify-between items-center py-2 border-b border-gray-200/50">
                   <span className="text-sm text-gray-600">Total Visits</span>
                   <span className="font-medium text-gray-900">{patient.totalVisits || 0}</span>
@@ -1316,8 +1345,9 @@ const DetailRow: React.FC<{ label: string; value: string; icon?: React.ElementTy
 // Updated Add Patient Modal with correct API fields
 const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: any) => void; }> = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
+    fullName: '',
     age: '',
-    gender: 'other',
+    gender: 'male',
     bloodGroup: 'O+',
     phone: '',
     address: '',
@@ -1332,6 +1362,7 @@ const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: a
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
     if (!formData.age || parseInt(formData.age) < 0 || parseInt(formData.age) > 120) {
       newErrors.age = 'Valid age (0-120) is required';
     }
@@ -1392,6 +1423,22 @@ const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: a
         <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
           <form onSubmit={handleSubmit} className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  name="fullName" 
+                  value={formData.fullName} 
+                  onChange={handleChange} 
+                  required 
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 ${errors.fullName ? 'border-red-300' : 'border-gray-300'}`} 
+                  placeholder="John Doe" 
+                />
+                {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Age <span className="text-red-500">*</span>
@@ -1526,7 +1573,7 @@ const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: a
             <div className="sticky bottom-0 bg-white pt-6 mt-4 border-t border-gray-200">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> The patient will be automatically assigned a unique ID and display name.
+                  <strong>Note:</strong> The patient will be automatically assigned a unique ID and email address.
                   Required fields are marked with <span className="text-red-500">*</span>.
                 </p>
               </div>
@@ -1566,6 +1613,7 @@ const AddPatientModal: React.FC<{ onClose: () => void; onSubmit: (patientData: a
 // Edit Patient Modal
 const EditPatientModal: React.FC<{ patient: Patient; onClose: () => void; onSubmit: (patientId: string, updateData: any) => void; }> = ({ patient, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
+    fullName: patient.fullName || '',
     age: patient.age.toString(),
     gender: patient.gender,
     bloodGroup: patient.bloodGroup,
@@ -1583,6 +1631,7 @@ const EditPatientModal: React.FC<{ patient: Patient; onClose: () => void; onSubm
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
     if (!formData.age || parseInt(formData.age) < 0 || parseInt(formData.age) > 120) {
       newErrors.age = 'Valid age (0-120) is required';
     }
@@ -1644,11 +1693,28 @@ const EditPatientModal: React.FC<{ patient: Patient; onClose: () => void; onSubm
         
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">Patient Display Name</p>
-            <p className="font-medium text-gray-900">{patient.name || `Patient ${patient._id.substring(0, 8)}`}</p>
+            <p className="text-sm text-gray-600">Patient Details</p>
+            <p className="font-medium text-gray-900">ID: {patient._id}</p>
+            {patient.email && <p className="text-sm text-gray-600 mt-1">Email: {patient.email}</p>}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <input 
+                type="text" 
+                name="fullName" 
+                value={formData.fullName} 
+                onChange={handleChange} 
+                required 
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.fullName ? 'border-red-300' : 'border-gray-300'}`}
+                placeholder="John Doe"
+              />
+              {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Age <span className="text-red-500">*</span>
