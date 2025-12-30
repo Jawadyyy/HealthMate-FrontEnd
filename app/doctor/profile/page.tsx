@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, GraduationCap, Building, Award, Save, Camera, Globe, Calendar } from 'lucide-react';
+import { User, Mail, Phone, MapPin, GraduationCap, Building, Award, Save, Camera, Globe, Calendar, Clock, DollarSign, AlertCircle } from 'lucide-react';
 import api from '@/lib/api/api';
 
 interface UserData {
@@ -46,6 +46,7 @@ const DoctorProfilePage = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [newDegree, setNewDegree] = useState('');
+    const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null);
 
     const availableDaysOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const timeSlots = [
@@ -55,6 +56,8 @@ const DoctorProfilePage = () => {
 
     // Transform data from backend to frontend format
     const transformProfileFromBackend = (responseData: any): DoctorProfile => {
+        console.log('📥 Raw backend data:', responseData);
+        
         let degreesArray: string[] = [];
         if (responseData.degrees) {
             if (typeof responseData.degrees === 'string') {
@@ -67,14 +70,14 @@ const DoctorProfilePage = () => {
         
         return {
             _id: responseData._id || '',
-            userId: responseData.userId || null,
+            userId: responseData.userId || { name: responseData.fullName || '', email: '' },
             specialization: responseData.specialization || '',
             degrees: degreesArray,
             experienceYears: responseData.experienceYears || 0,
             phone: responseData.phone || '',
-            hospital: responseData.hospitalName || '', // Map from hospitalName
+            hospital: responseData.hospitalName || responseData.hospital || '',
             address: responseData.address || '',
-            consultationFee: responseData.fee || 0, // Map from fee
+            consultationFee: responseData.fee || responseData.consultationFee || 0,
             availableDays: responseData.availableDays || [],
             availableSlots: responseData.availableSlots || [],
             bio: responseData.bio || '',
@@ -83,25 +86,34 @@ const DoctorProfilePage = () => {
         };
     };
 
-    // Transform data from frontend to backend format
+    // Transform data from frontend to backend format (UpdateDoctorDto schema)
     const transformProfileForBackend = (profile: DoctorProfile) => {
-        const transformed: any = {
-            specialization: profile.specialization,
-            degrees: profile.degrees.join(', '), // Convert array to string
-            experienceYears: profile.experienceYears,
-            phone: profile.phone,
-            hospitalName: profile.hospital, // Map to hospitalName
-            address: profile.address,
-            fee: profile.consultationFee, // Map to fee
-            availableDays: profile.availableDays,
-            availableSlots: profile.availableSlots,
+        // Convert degrees array to comma-separated string
+        const degreesString = profile.degrees.join(', ');
+        
+        const transformed = {
+            specialization: profile.specialization || '',
+            degrees: degreesString, // MUST BE STRING for UpdateDoctorDto
+            experienceYears: profile.experienceYears || 0,
+            phone: profile.phone || '',
+            hospitalName: profile.hospital || '', // MUST BE hospitalName
+            address: profile.address || '',
+            fee: profile.consultationFee || 0, // MUST BE fee
+            availableDays: profile.availableDays || [],
+            availableSlots: profile.availableSlots || []
         };
         
-        // Only include bio if it exists (since your schema doesn't have bio field)
-        if (profile.bio) {
-            transformed.bio = profile.bio;
+        // Include fullName if available (UpdateDoctorDto has this field)
+        if (profile.userId?.name) {
+            (transformed as any).fullName = profile.userId.name;
         }
         
+        // Include bio if it exists
+        if (profile.bio && profile.bio.trim() !== '') {
+            (transformed as any).bio = profile.bio;
+        }
+        
+        console.log('📤 Transformed for backend:', transformed);
         return transformed;
     };
 
@@ -112,10 +124,20 @@ const DoctorProfilePage = () => {
     const fetchProfile = async () => {
         try {
             setLoading(true);
+            setMessage(null);
+            
             const response = await api.get('/doctors/me');
-            setProfile(transformProfileFromBackend(response.data));
-        } catch (error) {
-            console.error('Error fetching doctor profile:', error);
+            console.log('✅ Profile data from backend:', response.data);
+            
+            const transformedProfile = transformProfileFromBackend(response.data);
+            setProfile(transformedProfile);
+            
+        } catch (error: any) {
+            console.error('❌ Error fetching doctor profile:', error);
+            setMessage({
+                text: 'Failed to load profile. Please try again.',
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
@@ -124,12 +146,37 @@ const DoctorProfilePage = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
+            setMessage(null);
+            
             const dataToSend = transformProfileForBackend(profile);
-            await api.patch('/doctors/update', dataToSend);
-            alert('Profile updated successfully!');
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            alert('Failed to update profile');
+            console.log('📤 Sending to /doctors/update:', dataToSend);
+            
+            const response = await api.patch('/doctors/update', dataToSend);
+            console.log('✅ Update response:', response.data);
+            
+            setMessage({
+                text: 'Profile updated successfully!',
+                type: 'success'
+            });
+            
+            // Refresh profile data
+            fetchProfile();
+            
+        } catch (error: any) {
+            console.error('❌ Error updating profile:', error);
+            
+            let errorMessage = 'Failed to update profile';
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.response?.data?.errors) {
+                const errors = Object.values(error.response.data.errors).join(', ');
+                errorMessage = `Validation errors: ${errors}`;
+            }
+            
+            setMessage({
+                text: errorMessage,
+                type: 'error'
+            });
         } finally {
             setSaving(false);
         }
@@ -194,14 +241,24 @@ const DoctorProfilePage = () => {
                             <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
                             <p className="text-gray-500 mt-2">Manage your professional information</p>
                         </div>
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-emerald-500/30 cursor-pointer disabled:opacity-50"
-                        >
-                            <Save className="w-5 h-5" />
-                            <span className="font-medium">{saving ? 'Saving...' : 'Save Changes'}</span>
-                        </button>
+                        <div className="flex items-center gap-4">
+                            {message && (
+                                <div className={`flex items-center px-4 py-2 rounded-lg ${message.type === 'success' 
+                                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
+                                    : 'bg-red-100 text-red-700 border border-red-200'}`}>
+                                    {message.type === 'error' && <AlertCircle className="w-4 h-4 mr-2" />}
+                                    <span>{message.text}</span>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl hover:from-emerald-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-emerald-500/30 cursor-pointer disabled:opacity-50"
+                            >
+                                <Save className="w-5 h-5" />
+                                <span className="font-medium">{saving ? 'Saving...' : 'Save Changes'}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -348,14 +405,17 @@ const DoctorProfilePage = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Consultation Fee ($)
                                     </label>
-                                    <input
-                                        type="number"
-                                        value={profile.consultationFee}
-                                        onChange={(e) => setProfile({...profile, consultationFee: parseInt(e.target.value) || 0})}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                                        min="0"
-                                        step="10"
-                                    />
+                                    <div className="flex items-center">
+                                        <DollarSign className="w-4 h-4 text-gray-400 mr-3" />
+                                        <input
+                                            type="number"
+                                            value={profile.consultationFee}
+                                            onChange={(e) => setProfile({...profile, consultationFee: parseInt(e.target.value) || 0})}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                                            min="0"
+                                            step="10"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div>
@@ -425,7 +485,7 @@ const DoctorProfilePage = () => {
                                 <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
                                     <Calendar className="w-5 h-5 text-amber-600" />
                                 </div>
-                                <h2 className="text-lg font-bold text-gray-900">Availability</h2>
+                                <h2 className="text-lg font-bold text-gray-900">Availability Schedule</h2>
                             </div>
 
                             <div className="space-y-6">
@@ -458,6 +518,10 @@ const DoctorProfilePage = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-3">
                                         Available Time Slots
                                     </label>
+                                    <div className="flex items-center space-x-2 mb-3">
+                                        <Clock className="w-4 h-4 text-gray-400" />
+                                        <span className="text-sm text-gray-600">Select your available hours:</span>
+                                    </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         {timeSlots.map((slot) => (
                                             <label
@@ -477,6 +541,13 @@ const DoctorProfilePage = () => {
                                             </label>
                                         ))}
                                     </div>
+                                    {profile.availableDays.length > 0 && profile.availableSlots.length > 0 && (
+                                        <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                            <p className="text-sm text-emerald-700">
+                                                Your availability: {profile.availableDays.join(', ')} from {profile.availableSlots.length > 0 ? `${profile.availableSlots[0]} to ${profile.availableSlots[profile.availableSlots.length-1]}` : 'Not set'}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

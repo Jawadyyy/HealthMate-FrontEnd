@@ -1,8 +1,7 @@
-// app/auth/patient/login/page.tsx
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import styles from "../patient.module.css";
 import { loginPatient } from "@/lib/auth/auth";
@@ -10,19 +9,14 @@ import { AxiosError } from "axios";
 
 export default function PatientLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetSuccess = searchParams.get("reset") === "success";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-
-  // Forgot password states
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [resetError, setResetError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,37 +40,6 @@ export default function PatientLoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetError("");
-    setResetLoading(true);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setResetSuccess(true);
-      setTimeout(() => {
-        setShowForgotPassword(false);
-        setResetSuccess(false);
-        setResetEmail("");
-      }, 3000);
-    } catch (err) {
-      const axiosError = err as AxiosError<{ message: string }>;
-      setResetError(
-        axiosError.response?.data?.message ||
-        "Failed to send reset email. Please try again."
-      );
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const closeForgotPasswordModal = () => {
-    setShowForgotPassword(false);
-    setResetEmail("");
-    setResetError("");
-    setResetSuccess(false);
   };
 
   const handleSignupClick = () => {
@@ -115,6 +78,12 @@ export default function PatientLoginPage() {
           <h1>Patient Login</h1>
           <p>Sign in to access your healthcare dashboard</p>
 
+          {resetSuccess && (
+            <p className={styles.successMessage}>
+              Password reset successful! Please login with your new password.
+            </p>
+          )}
+
           {error && <p className={styles.patientError}>{error}</p>}
 
           <form onSubmit={handleLogin}>
@@ -137,14 +106,12 @@ export default function PatientLoginPage() {
             />
 
             <div className={styles.forgotPasswordContainer}>
-              <button
-                type="button"
+              <Link
+                href="/auth/patient/forgot-password"
                 className={styles.forgotPasswordLink}
-                onClick={() => setShowForgotPassword(true)}
-                disabled={isTransitioning}
               >
                 Forgot Password?
-              </button>
+              </Link>
             </div>
 
             <button
@@ -183,53 +150,6 @@ export default function PatientLoginPage() {
           </button>
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      {showForgotPassword && (
-        <div className={styles.modalOverlay} onClick={closeForgotPasswordModal}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <button
-              className={styles.modalClose}
-              onClick={closeForgotPasswordModal}
-            >
-              ×
-            </button>
-
-            <h2 className={styles.modalTitle}>Reset Password</h2>
-            <p className={styles.modalDescription}>
-              Enter your email address and we'll send you a link to reset your password.
-            </p>
-
-            {resetSuccess ? (
-              <div className={styles.successMessage}>
-                Password reset link sent! Check your email.
-              </div>
-            ) : (
-              <form onSubmit={handleForgotPassword}>
-                {resetError && (
-                  <div className={styles.error}>{resetError}</div>
-                )}
-
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  disabled={resetLoading}
-                  required
-                />
-
-                <button
-                  type="submit"
-                  disabled={resetLoading}
-                >
-                  {resetLoading ? "Sending..." : "Send Reset Link"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
     </main>
   );
 }
