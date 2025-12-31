@@ -76,9 +76,8 @@ lib/                  # Core logic
 
 Create a \`.env.local\` file in the root directory:
 
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
-NEXT_PUBLIC_AUTH_TOKEN_KEY=healthmate_token
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
 ---
@@ -86,16 +85,24 @@ NEXT_PUBLIC_AUTH_TOKEN_KEY=healthmate_token
 ## 📦 Installation & Setup
 
 # Clone the repository
+```
 git clone https://github.com/Jawadyyy/HealthMate-FrontEnd
+```
 
 # Navigate to project folder
+```
 cd healthmate-frontend
+```
 
 # Install dependencies
+```
 npm install
+```
 
 # Run development server
+```
 npm run dev
+```
 
 ---
 
@@ -115,4 +122,6 @@ npm run start     # Start production server
 ## 🔗 Backend
 
 # Backend repository:  
+```
 git clone https://github.com/Jawadyyy/HealthMate-BackEnd
+```
