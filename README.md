@@ -84,29 +84,29 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api
 
 ## 📦 Installation & Setup
 
-# Clone the repository
+### Clone the repository
 ```
 git clone https://github.com/Jawadyyy/HealthMate-FrontEnd
 ```
 
-# Navigate to project folder
+### Navigate to project folder
 ```
 cd healthmate-frontend
 ```
 
-# Install dependencies
+### Install dependencies
 ```
 npm install
 ```
 
-# Run development server
+### Run development server
 ```
 npm run dev
 ```
 
 ---
 
-## 🧪 Scripts
+### 🧪 Scripts
 ```
 npm run dev       # Start development server
 ```
@@ -121,7 +121,7 @@ npm run start     # Start production server
 
 ## 🔗 Backend
 
-# Backend repository:  
+### Backend repository:  
 ```
 git clone https://github.com/Jawadyyy/HealthMate-BackEnd
 ```
